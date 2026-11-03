@@ -5,6 +5,7 @@ description = "POS"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "aiofiles>=25.1.0",
     "aiohttp>=3.14.5",
     "ncjishaku>=3.1.0",
     "nextcord>=3.2.0",

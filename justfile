@@ -4,8 +4,25 @@ build:
 
 # Serve the frontend and backend in development mode
 dev:
-    cd frontend && pnpm dev &
-    uv run pos -d
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    (cd frontend && pnpm dev) &
+    frontend_pid=$!
+
+    cleanup() {
+        local status=$?
+        trap - EXIT INT TERM
+
+        kill "$frontend_pid" 2>/dev/null || true
+        wait "$frontend_pid" 2>/dev/null || true
+
+        exit "$status"
+    }
+
+    trap cleanup EXIT INT TERM
+
+    uv run pos-service -d
 
 # Install dependencies for the frontend and backend
 install:
