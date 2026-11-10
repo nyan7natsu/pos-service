@@ -61,12 +61,14 @@ class SaleEvent(CashEventBase):
 
 
 class SaleItem(pydantic.BaseModel):
+    model_config = pydantic.ConfigDict(frozen=True, extra="forbid")
     product_id: int
     quantity: int = pydantic.Field(gt=0)
     unit_price: int = pydantic.Field(gt=0)
 
 
 class RefundItem(pydantic.BaseModel):
+    model_config = pydantic.ConfigDict(frozen=True, extra="forbid")
     product_id: int
     quantity: int = pydantic.Field(lt=0)
     unit_price: int = pydantic.Field(gt=0)
