@@ -14,7 +14,7 @@ class System(WebCog):
                 title="Health Check",
                 description=f"OK!\n{self.bot.latency*1000:.2f}ms",
                 color=nextcord.Color.green(),
-            ).set_footer(text=f"health_check|{self.bot.app.conf['lease_label']}")
+            ).set_footer(text=f"health_check|0|{self.bot.app.conf['lease_label']}")
         )
 
     @application_checks.guild_only()
@@ -25,7 +25,7 @@ class System(WebCog):
                 title="Shutdown",
                 description="Shutting down the bot (call `POSService.shutdown`)...",
                 color=nextcord.Color.yellow(),
-            ).set_footer(text=f"shutdown_log|{self.bot.app.conf['lease_label']}"),
+            ).set_footer(text=f"shutdown_log|{interaction.id}|{self.bot.app.conf['lease_label']}"),
             ephemeral=False,
         )
         self.bot.app.request_stop()
@@ -38,7 +38,7 @@ class System(WebCog):
                 title="Health Check",
                 description=f"OK!\n{self.bot.latency*1000:.2f}ms",
                 color=nextcord.Color.green(),
-            ).set_footer(text=f"health_check|{self.bot.app.conf['lease_label']}"),
+            ).set_footer(text=f"health_check|{interaction.id}|{self.bot.app.conf['lease_label']}"),
             ephemeral=True,
         )
 

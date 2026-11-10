@@ -107,7 +107,7 @@ class Refund(WebCog):
                     description="Cannot process refund because the ledger is not open.",
                     color=nextcord.Color.red(),
                 ).set_footer(
-                    text=f"refund_failed|{self.bot.app.conf['lease_label']}"
+                    text=f"refund_failed|{interaction.id}|{self.bot.app.conf['lease_label']}"
                 ),
                 ephemeral=True,
             )
@@ -138,7 +138,7 @@ class Refund(WebCog):
                     description="Refund amount must be positive and cash count must not be negative.",
                     color=nextcord.Color.red(),
                 ).set_footer(
-                    text=f"refund_failed|{self.bot.app.conf['lease_label']}"
+                    text=f"refund_failed|{interaction.id}|{self.bot.app.conf['lease_label']}"
                 ),
                 ephemeral=True,
             )
@@ -153,7 +153,7 @@ class Refund(WebCog):
                     description=f"Invalid product ID: {product_id}. Must be an integer or valid product ID.",
                     color=nextcord.Color.red(),
                 ).set_footer(
-                    text=f"refund_failed|{self.bot.app.conf['lease_label']}"
+                    text=f"refund_failed|{interaction.id}|{self.bot.app.conf['lease_label']}"
                 ),
                 ephemeral=True,
             )
@@ -166,7 +166,7 @@ class Refund(WebCog):
                     description=f"Product with ID `{product_id}` not found.",
                     color=nextcord.Color.red(),
                 ).set_footer(
-                    text=f"refund_failed|{self.bot.app.conf['lease_label']}"
+                    text=f"refund_failed|{interaction.id}|{self.bot.app.conf['lease_label']}"
                 ),
                 ephemeral=True,
             )
@@ -179,7 +179,7 @@ class Refund(WebCog):
                     description="Quantity must be greater than zero.",
                     color=nextcord.Color.red(),
                 ).set_footer(
-                    text=f"refund_failed|{self.bot.app.conf['lease_label']}"
+                    text=f"refund_failed|{interaction.id}|{self.bot.app.conf['lease_label']}"
                 ),
                 ephemeral=True,
             )
@@ -192,7 +192,7 @@ class Refund(WebCog):
                     description=f"Refund amount does not match product price. Expected ¥{product.price * quantity}, got ¥{amount}.",
                     color=nextcord.Color.red(),
                 ).set_footer(
-                    text=f"refund_failed|{self.bot.app.conf['lease_label']}"
+                    text=f"refund_failed|{interaction.id}|{self.bot.app.conf['lease_label']}"
                 ),
                 ephemeral=True,
             )
@@ -216,7 +216,7 @@ class Refund(WebCog):
                     description=f"Invalid cash count: {', '.join(insuficient_fields)}.\nAll counts must not exceed the available cash count.",
                     color=nextcord.Color.red(),
                 ).set_footer(
-                    text=f"refund_failed|{self.bot.app.conf['lease_label']}"
+                    text=f"refund_failed|{interaction.id}|{self.bot.app.conf['lease_label']}"
                 ),
                 ephemeral=True,
             )
@@ -229,7 +229,7 @@ class Refund(WebCog):
                     description=f"Refund amount exceeds available cash.\nAvailable: ¥{all_amount}, Refund: ¥{amount}.",
                     color=nextcord.Color.red(),
                 ).set_footer(
-                    text=f"refund_failed|{self.bot.app.conf['lease_label']}"
+                    text=f"refund_failed|{interaction.id}|{self.bot.app.conf['lease_label']}"
                 ),
                 ephemeral=True,
             )
@@ -252,14 +252,14 @@ class Refund(WebCog):
             ),)
         )
 
-        await self.bot.app.ledger.append(event)
+        await (await self.bot.app.ledger.append(event))[1]
 
         embed = nextcord.Embed(
             title="Refund Processed",
             description=f"Refund of ¥{amount} for product `{product.name}` (ID: {product_id}) processed successfully.",
             color=nextcord.Color.green(),
         ).set_footer(
-            text=f"refund_processed|{self.bot.app.conf['lease_label']}"
+            text=f"refund_processed|{interaction.id}|{self.bot.app.conf['lease_label']}"
         )
         await interaction.send(embed=embed, ephemeral=True)
 

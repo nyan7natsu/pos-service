@@ -99,7 +99,7 @@ class Sales(WebCog):
             embed.add_field(
                 name="VOIDユーザー", value=interaction.user.mention, inline=False
             )
-            embed.set_footer(text=f"voided|{self.idempotency_key}")
+            embed.set_footer(text=f"voided|{interaction.id}|{self.idempotency_key}")
             await self.message.edit(embed=embed)
 
     async def _get_voidable(self, target_key: str) -> LedgerEntry[SaleEvent]:

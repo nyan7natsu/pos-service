@@ -112,7 +112,7 @@ class Cash(WebCog):
                     title="Cash In Failed",
                     description="Amount must be positive.",
                     color=nextcord.Color.red(),
-                ).set_footer(text=f"cash_in_failed|{self.bot.app.conf['lease_label']}"),
+                ).set_footer(text=f"cash_in_failed|{interaction.id}|{self.bot.app.conf['lease_label']}"),
                 ephemeral=True,
             )
             return
@@ -249,7 +249,7 @@ class Cash(WebCog):
                     description="Amount must be positive.",
                     color=nextcord.Color.red(),
                 ).set_footer(
-                    text=f"cash_out_failed|{self.bot.app.conf['lease_label']}"
+                    text=f"cash_out_failed|{interaction.id}|{self.bot.app.conf['lease_label']}"
                 ),
                 ephemeral=True,
             )
@@ -273,7 +273,7 @@ class Cash(WebCog):
                     description=f"Invalid cash count: {', '.join(insuficient_fields)}.\nAll counts must not exceed the available cash count.",
                     color=nextcord.Color.red(),
                 ).set_footer(
-                    text=f"cash_out_failed|{self.bot.app.conf['lease_label']}"
+                    text=f"cash_out_failed|{interaction.id}|{self.bot.app.conf['lease_label']}"
                 ),
                 ephemeral=True,
             )
@@ -286,7 +286,7 @@ class Cash(WebCog):
                     description=f"Cash out amount exceeds available cash.\nAvailable: ¥{all_amount}, Cash Out: ¥{amount}.",
                     color=nextcord.Color.red(),
                 ).set_footer(
-                    text=f"cash_out_failed|{self.bot.app.conf['lease_label']}"
+                    text=f"cash_out_failed|{interaction.id}|{self.bot.app.conf['lease_label']}"
                 ),
                 ephemeral=True,
             )
@@ -334,7 +334,7 @@ class Cash(WebCog):
                 description=f"Current total cash: {all_amount} yen",
                 color=nextcord.Color.blue(),
             )
-            .set_footer(text=f"cash_total|{self.bot.app.conf['lease_label']}")
+            .set_footer(text=f"cash_total|{interaction.id}|{self.bot.app.conf['lease_label']}")
             .add_field(
                 name="Cash Count",
                 value="\n".join(

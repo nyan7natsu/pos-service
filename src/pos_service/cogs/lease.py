@@ -38,7 +38,7 @@ class Lease(WebCog):
                         description="The lease has expired. The bot will shut down.",
                         color=nextcord.Color.red(),
                     ).set_footer(
-                        text=f"expired_log|{self.bot.app.conf['lease_label']}"
+                        text=f"expired_log|{0}|{self.bot.app.conf['lease_label']}"
                     ),
                 )
                 self.bot.app.request_stop(False)
@@ -68,7 +68,7 @@ class Lease(WebCog):
                     title="Lease Status",
                     description=await resp.text(),
                     color=nextcord.Color.green(),
-                ).set_footer(text=f"lease_status|{self.bot.app.conf['lease_label']}"),
+                ).set_footer(text=f"lease_status|0|{self.bot.app.conf['lease_label']}"),
             )
 
     @application_checks.guild_only()
@@ -89,7 +89,7 @@ class Lease(WebCog):
                         description="The lease has expired. The bot will shut down.",
                         color=nextcord.Color.red(),
                     ).set_footer(
-                        text=f"expired_log|{self.bot.app.conf['lease_label']}"
+                        text=f"expired_log|0|{self.bot.app.conf['lease_label']}"
                     ),
                     ephemeral=True,
                 )
@@ -101,7 +101,7 @@ class Lease(WebCog):
                         description=f"Failed to renew lease. Status code: {resp.status}",
                         color=nextcord.Color.red(),
                     ).set_footer(
-                        text=f"renew_failed_log|{self.bot.app.conf['lease_label']}"
+                        text=f"renew_failed_log|0|{self.bot.app.conf['lease_label']}"
                     ),
                     ephemeral=True,
                 )
@@ -112,7 +112,7 @@ class Lease(WebCog):
                         description="Lease renewed successfully.",
                         color=nextcord.Color.green(),
                     ).set_footer(
-                        text=f"renewed_log|{self.bot.app.conf['lease_label']}"
+                        text=f"renewed_log|0|{self.bot.app.conf['lease_label']}"
                     ),
                     ephemeral=True,
                 )

@@ -24,7 +24,7 @@ class ErrorHandle(WebCog):
                     f"```python\n{self.bot.app.authenticator.mask_password("".join(traceback.format_exception(error.original if isinstance(error, (commands.ConversionError, commands.CommandInvokeError)) else error)))}\n```"
                 ),
                 color=nextcord.Color.red(),
-            ).set_footer(text=f"command_error|{self.bot.app.conf['lease_label']}")
+            ).set_footer(text=f"command_error|0|{self.bot.app.conf['lease_label']}")
         )
 
     @commands.Cog.listener()
@@ -47,7 +47,7 @@ class ErrorHandle(WebCog):
                     ),
                     color=nextcord.Color.red(),
                 ).set_footer(
-                    text=f"application_command_error|{self.bot.app.conf['lease_label']}"
+                    text=f"application_command_error|{interaction.id}|{self.bot.app.conf['lease_label']}"
                 ),
                 ephemeral=True,
             )
@@ -61,7 +61,7 @@ class ErrorHandle(WebCog):
                     ),
                     color=nextcord.Color.red(),
                 ).set_footer(
-                    text=f"application_command_error|{self.bot.app.conf['lease_label']}"
+                    text=f"application_command_error|{interaction.id}|{self.bot.app.conf['lease_label']}"
                 ),
                 ephemeral=True,
             )
