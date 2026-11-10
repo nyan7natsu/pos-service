@@ -260,6 +260,10 @@ class Refund(WebCog):
             color=nextcord.Color.green(),
         ).set_footer(
             text=f"refund_processed|{interaction.id}|{self.bot.app.conf['lease_label']}"
+        ).add_field(
+            name="Reason", value=reason, inline=False
+        ).add_field(
+            name="Author", value=interaction.user.mention, inline=False
         )
         await interaction.send(embed=embed, ephemeral=True)
 
