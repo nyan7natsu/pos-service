@@ -12,6 +12,7 @@ from aiohttp.web import Application, AppRunner, HTTPFound, Request, Response, TC
 from .auth import Authenticator
 from .bot import BotApp
 from .lib.ledger import LedgerManager
+from .lib.product import ProductManager
 from .webutil import Endpoint
 
 _logger = getLogger(__name__)
@@ -37,6 +38,7 @@ class POSService:
     __release_lease_on_shutdown: bool = True
     runner: AppRunner
     bot_task: asyncio.Task | None = None
+    ledger_task: asyncio.Task | None = None
     authenticator: Authenticator
 
     def __init__(self, id: str, conf: GeneralConfig):
@@ -54,6 +56,7 @@ class POSService:
 
         self.authenticator = Authenticator()
         self.ledger = LedgerManager(pos=self, filename="ledger.jsonl")
+        self.product_manager = ProductManager(pos=self, filename="products.yaml")
 
         self.web = Application(loop=self.loop)
         self.bot = BotApp(
@@ -205,6 +208,10 @@ class POSService:
             sys.exit(0)
 
     async def web_on_startup(self, _):
+        await self.authenticator.load_password_file()
+        await self.product_manager.load()
+        await self.ledger.load()
+        self.ledger_task = self.loop.create_task(self.ledger.run(), name="ledger")
         self.bot_task = self.loop.create_task(self.bot_start(), name="bot")
         try:
             await asyncio.wait_for(self.bot.wait_until_ready(), timeout=30)
@@ -235,16 +242,27 @@ class POSService:
         except Exception as e:
             _logger.error("Error while unloading extensions: %s", e)
 
+        # BOTの停止
         try:
             await asyncio.wait_for(self.bot.close(), timeout=10)
             if self.bot_task:
                 self.bot_task.cancel()
         except Exception as e:
             _logger.error("Error while cancelling bot task: %s", e)
+
+        # Webサーバの停止
         try:
             await self.runner.cleanup()
         except Exception as e:
             _logger.error("Error while shutting down web server: %s", e)
+
+        # 台帳書き込みの停止
+        try:
+            await asyncio.wait_for(self.ledger.queue.join(), timeout=10)
+            if self.ledger_task:
+                self.ledger_task.cancel()
+        except Exception as e:
+            _logger.error("Error while cancelling ledger task: %s", e)
 
         if self.__release_lease_on_shutdown:
             try:

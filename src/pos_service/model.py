@@ -1,3 +1,4 @@
+import datetime
 import typing
 from enum import Enum
 
@@ -24,7 +25,7 @@ class EventsSource(str, Enum):
 class LedgerEntry[T: "LedgerEvent"](pydantic.BaseModel):
     model_config = pydantic.ConfigDict(frozen=True, extra="forbid")
     id: int
-    recorded_at: str
+    recorded_at: datetime.datetime
     event: "T"
 
 
@@ -40,12 +41,23 @@ class LedgerEventBase(pydantic.BaseModel):
     cash_delta: int
     discount: int
     operator: int
-    occurred_at: str
+    occurred_at: datetime.datetime
 
 
-class SaleEvent(LedgerEventBase):
+class CashEventBase(LedgerEventBase):
+    cash_count: "CashCount"
+
+    @pydantic.model_validator(mode="after")
+    def check_cash_count(self):
+        if self.cash_count.total() != self.cash_delta:
+            raise ValueError(
+                f"cash_count の合計 {self.cash_count.total()} が cash_delta {self.cash_delta} と違う")
+        return self
+
+
+class SaleEvent(CashEventBase):
     type: typing.Literal[EventsType.SALE] = EventsType.SALE
-    items: tuple["SaleItem"]
+    items: tuple["SaleItem", ...]
 
 
 class SaleItem(pydantic.BaseModel):
@@ -54,26 +66,30 @@ class SaleItem(pydantic.BaseModel):
     unit_price: int = pydantic.Field(gt=0)
 
 
-class VoidEvent(LedgerEventBase):
+class RefundItem(pydantic.BaseModel):
+    product_id: int
+    quantity: int = pydantic.Field(lt=0)
+    unit_price: int = pydantic.Field(gt=0)
+
+
+class VoidEvent(CashEventBase):
     type: typing.Literal[EventsType.VOID] = EventsType.VOID
     reason: str
     ref_event_id: int
 
 
-class RefundEvent(LedgerEventBase):
+class RefundEvent(CashEventBase):
     type: typing.Literal[EventsType.REFUND] = EventsType.REFUND
     reason: str
-    ref_event_id: int
+    items: tuple["RefundItem", ...]
 
 
-class CashInEvent(LedgerEventBase):
+class CashInEvent(CashEventBase):
     type: typing.Literal[EventsType.CASH_IN] = EventsType.CASH_IN
-    cash_count: "CashCount"
 
 
-class CashOutEvent(LedgerEventBase):
+class CashOutEvent(CashEventBase):
     type: typing.Literal[EventsType.CASH_OUT] = EventsType.CASH_OUT
-    cash_count: "CashCount"
 
 
 class OpenEvent(LedgerEventBase):
@@ -93,16 +109,44 @@ class CashCountEvent(LedgerEventBase):
 
 class CashCount(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(frozen=True, extra="forbid")
-    yen_10000: int | None
-    yen_5000: int | None
-    yen_2000: int | None
-    yen_1000: int | None
-    yen_500: int | None
-    yen_100: int | None
-    yen_50: int | None
-    yen_10: int | None
-    yen_5: int | None
-    yen_1: int | None
+    yen_10000: int = 0
+    yen_5000: int = 0
+    yen_2000: int = 0
+    yen_1000: int = 0
+    yen_500: int = 0
+    yen_100: int = 0
+    yen_50: int = 0
+    yen_10: int = 0
+    yen_5: int = 0
+    yen_1: int = 0
+
+    def __add__(self, other: "CashCount") -> "CashCount":
+        return CashCount(
+            yen_10000=self.yen_10000 + other.yen_10000,
+            yen_5000=self.yen_5000 + other.yen_5000,
+            yen_2000=self.yen_2000 + other.yen_2000,
+            yen_1000=self.yen_1000 + other.yen_1000,
+            yen_500=self.yen_500 + other.yen_500,
+            yen_100=self.yen_100 + other.yen_100,
+            yen_50=self.yen_50 + other.yen_50,
+            yen_10=self.yen_10 + other.yen_10,
+            yen_5=self.yen_5 + other.yen_5,
+            yen_1=self.yen_1 + other.yen_1,
+        )
+
+    def __neg__(self) -> "CashCount":
+        return CashCount(
+            yen_10000=-self.yen_10000,
+            yen_5000=-self.yen_5000,
+            yen_2000=-self.yen_2000,
+            yen_1000=-self.yen_1000,
+            yen_500=-self.yen_500,
+            yen_100=-self.yen_100,
+            yen_50=-self.yen_50,
+            yen_10=-self.yen_10,
+            yen_5=-self.yen_5,
+            yen_1=-self.yen_1,
+        )
 
     def total(self) -> int:
         return (

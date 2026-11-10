@@ -37,19 +37,34 @@ class ErrorHandle(WebCog):
             error,
             exc_info=error,
         )
-        await interaction.send(
-            embed=nextcord.Embed(
-                title="Application Command Error",
-                description=(
-                    f"An error occurred while executing the application command: {self.bot.app.authenticator.mask_password(error)}\n\n"
-                    f"```python\n{self.bot.app.authenticator.mask_password("".join(traceback.format_exception(error.original if isinstance(error, nextcord.ApplicationInvokeError) else error)))}\n```"
+        if interaction.response.is_done():
+            await interaction.followup.send(
+                embed=nextcord.Embed(
+                    title="Application Command Error",
+                    description=(
+                        f"An error occurred while executing the application command: {self.bot.app.authenticator.mask_password(error)}\n\n"
+                        f"```python\n{self.bot.app.authenticator.mask_password("".join(traceback.format_exception(error.original if isinstance(error, nextcord.ApplicationInvokeError) else error)))}\n```"
+                    ),
+                    color=nextcord.Color.red(),
+                ).set_footer(
+                    text=f"application_command_error|{self.bot.app.conf['lease_label']}"
                 ),
-                color=nextcord.Color.red(),
-            ).set_footer(
-                text=f"application_command_error|{self.bot.app.conf['lease_label']}"
-            ),
-            ephemeral=True,
-        )
+                ephemeral=True,
+            )
+        else:
+            await interaction.send(
+                embed=nextcord.Embed(
+                    title="Application Command Error",
+                    description=(
+                        f"An error occurred while executing the application command: {self.bot.app.authenticator.mask_password(error)}\n\n"
+                        f"```python\n{self.bot.app.authenticator.mask_password("".join(traceback.format_exception(error.original if isinstance(error, nextcord.ApplicationInvokeError) else error)))}\n```"
+                    ),
+                    color=nextcord.Color.red(),
+                ).set_footer(
+                    text=f"application_command_error|{self.bot.app.conf['lease_label']}"
+                ),
+                ephemeral=True,
+            )
 
 
 def setup(bot: BotApp):

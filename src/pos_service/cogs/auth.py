@@ -21,6 +21,7 @@ class Auth(WebCog):
     @slash_password.subcommand(name="regen", description="Regenerate the password")
     async def slash_password_regen(self, interaction: nextcord.Interaction):
         self.bot.app.authenticator.regen_password()
+        await self.bot.app.authenticator.write_password_file()
         qr = await self.get_qr_code()
         await interaction.send(
             "Password regenerated.",
@@ -40,8 +41,8 @@ class Auth(WebCog):
 
     @post("/api/auth")
     async def handler_check_password(self, request: Request) -> Response:
-        data: dict = await request.json()
-        password = data.get("password", "")
+        password = request.headers.get("X-Auth-Password", "")
+
         if self.bot.app.authenticator.check_password(password):
             return Response(text="OK", content_type="text/plain")
         else:

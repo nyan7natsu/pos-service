@@ -1,28 +1,19 @@
 import asyncio
 import datetime
+import os
 import typing
 from contextlib import asynccontextmanager
 from logging import getLogger
 
 import aiofiles
 
+from ..model import (CashCount, CashCountEvent, CashInEvent, CashOutEvent,
+                     CloseEvent, LedgerEntry, LedgerEvent, OpenEvent,
+                     RefundEvent, SaleEvent, VoidEvent)
 from .lock import NamedLock
 
 if typing.TYPE_CHECKING:
     from ..bot import BotApp
-    from ..model import (
-        CashCount,
-        CashCountEvent,
-        CashInEvent,
-        CashOutEvent,
-        CloseEvent,
-        LedgerEntry,
-        LedgerEvent,
-        OpenEvent,
-        RefundEvent,
-        SaleEvent,
-        VoidEvent,
-    )
     from ..pos import POSService
 
 JST = datetime.timezone(datetime.timedelta(hours=9), name="JST")
@@ -35,25 +26,30 @@ class LedgerManager:
         self.pos = pos
         self.logger = getLogger(f"{__name__}.lib.ledger")
         self.filename = filename
+        self.write_failed: bool = False
 
         self.data: list["LedgerEntry[LedgerEvent]"] = []
 
         self.__append_lock = NamedLock(name="ledger_append_lock")
         self.queue: asyncio.Queue[list["LedgerEntry[LedgerEvent]"]] = asyncio.Queue()
+        self.wrote: list[int] = []
+        self.exception: dict[int, Exception] = {}
 
     @asynccontextmanager
     async def transaction(self):
         async with self.__append_lock:
             yield self.__append_lock
 
-    async def append[E: "LedgerEvent"](self, *event: E) -> list[LedgerEntry[E]]:
+    async def append[E: "LedgerEvent"](
+        self, *event: E
+    ) -> tuple[list["LedgerEntry[E]"], typing.Coroutine[typing.Any, typing.Any, None]]:
         "Ledgerにイベントを追加する"
         async with self.transaction() as lock:
             return await self.append_with_unlock(lock, *event)
 
     async def append_with_unlock[E: "LedgerEvent"](
         self, lock: NamedLock, *event: E
-    ) -> list[LedgerEntry[E]]:
+    ) -> tuple[list[LedgerEntry[E]], typing.Coroutine[typing.Any, typing.Any, None]]:
         "Ledgerにイベントを追加する（ロックを取得せずに呼び出す）"
 
         if lock.name != self.__append_lock.name or not lock.locked():
@@ -61,46 +57,90 @@ class LedgerManager:
 
         entries: list[LedgerEntry[E]] = []
         for e in event:
+            if self.find(idempotency_key=e.idempotency_key):
+                raise RuntimeError(
+                    f"Duplicate idempotency key: {e.idempotency_key}")
             entry = LedgerEntry(
                 id=self.last_id() + 1,
-                recorded_at=datetime.datetime.now().astimezone(JST).isoformat(),
-                **e.model_dump(),
+                recorded_at=datetime.datetime.now().astimezone(JST),
+                event=e,
             )
             entries.append(entry)
             self.data.append(entry)
         await self.queue.put(entries)
-        return entries
+
+        return (entries, self.wait_saved(ids=[e.id for e in entries]))
 
     async def __write_file(self, events: list["LedgerEntry[LedgerEvent]"]):
-        async with aiofiles.open(self.filename, mode="a") as f:
+        async with aiofiles.open(self.filename, mode="a", encoding="utf-8") as f:
             await f.write(
                 "\n".join([event.model_dump_json() for event in events]) + "\n"
             )
+            await f.flush()
+            await asyncio.to_thread(os.fsync, f.fileno())
 
     async def run(self):
         "Ledgerのイベントを処理する"
         while True:
             entry = await self.queue.get()
             try:
+                if self.write_failed:
+                    continue
                 await self.__write_file(entry)
-            except Exception as e:
-                self.logger.error(f"Failed to write ledger entry: {e}")
+                self.wrote.extend([e.id for e in entry])
+            except Exception as err:
+                self.logger.error(f"Failed to write ledger entry: {err}")
+                self.exception.update({e.id: err for e in entry})
+                self.write_failed = True
             finally:
                 self.queue.task_done()
 
     async def load(self):
         "Ledgerのイベントを読み込む"
+        data: list["LedgerEntry[LedgerEvent]"] = []
+        self.logger.info(f"Loading ledger from {self.filename}...")
         try:
-            async with aiofiles.open(self.filename, mode="r") as f:
-                async for line in f:
-                    entry = LedgerEntry.model_validate_json(line.strip())
-                    self.data.append(entry)
+            async with aiofiles.open(self.filename, mode="rb") as f:
+                raw = await f.read()
+
+            complete, sep, torn = raw.rpartition(b"\n")
+
+            if torn:
+                self.logger.warning(
+                    "Discarding incomplete last line: %r", torn)
+                async with aiofiles.open(self.filename, "r+b") as f:
+                    await f.truncate(len(complete) + len(sep))
+                    await f.flush()
+                    await asyncio.to_thread(os.fsync, f.fileno())
+
+            for line in complete.split(b"\n"):
+                if not line.strip():
+                    continue
+                entry = LedgerEntry.model_validate_json(line)
+                data.append(entry)
+
         except FileNotFoundError:
             self.logger.warning(
-                f"Ledger file {self.filename} not found. Starting with empty ledger."
+                f"Ledger file {self.filename} not found. Creating a new one."
             )
-        except Exception as e:
-            self.logger.error(f"Failed to load ledger: {e}")
+            async with aiofiles.open(self.filename, mode="w", encoding="utf-8") as f:
+                await f.write("")
+
+        self.logger.info(f"Checking ledger consistency...")
+
+        for i, entry in enumerate(data):
+            if entry.id != i + 1:
+                self.logger.error(
+                    f"Ledger entry ID mismatch: expected {i + 1}, got {entry.id}"
+                )
+                self.pos.request_stop()
+                raise RuntimeError(
+                    f"Ledger entry ID mismatch: expected {i + 1}, got {entry.id}"
+                )
+
+        self.data = data
+        self.logger.info(
+            f"Loaded {len(self.data)} ledger entries from {self.filename}")
 
     def find(self, *, idempotency_key: str) -> "LedgerEntry[LedgerEvent] | None":
         "Ledgerのイベントを冪等キーから検索する"
@@ -109,12 +149,18 @@ class LedgerManager:
                 return entry
         return None
 
-    async def wait_saved(self, *, id: str):
+    async def wait_saved(self, *, ids: list[int]):
         "Ledgerのイベントが保存されるまで待つ"
         while True:
-            if any(event.id == id for event in self.data):
+            if all(id in self.wrote for id in ids):
                 return
+            if self.write_failed:
+                self.pos.request_stop()
+                cause = next(
+                    (self.exception[id] for id in ids if id in self.exception), None)
+                raise RuntimeError("Failed to write ledger entry") from cause
             await asyncio.sleep(0.1)
+
 
     def get(self, *, id: int) -> "LedgerEntry[LedgerEvent] | None":
         "LedgerのイベントをIDから取得する"
@@ -125,10 +171,7 @@ class LedgerManager:
 
     def after(self, *, id: int) -> list["LedgerEntry[LedgerEvent]"]:
         "LedgerのイベントをID以降で取得する"
-        for idx, event in enumerate(self.data):
-            if event.id == id:
-                return self.data[idx + 1 :]
-        return []
+        return [e for e in self.data if e.id > id]
 
     def expected_cash(self) -> int:
         "Ledgerのイベントから期待される現金残高を計算する"
@@ -153,6 +196,8 @@ class LedgerManager:
 
     def get_cash_count(self) -> CashCount:
         "LedgerのイベントからOpenEventまたはCloseEventのCashCountを取得する"
+        _cash_count: CashCount = CashCount()
+        _last_event: LedgerEntry[LedgerEvent] | None = None
         for entry in reversed(self.data):
             match entry.event:
                 case (
@@ -160,19 +205,22 @@ class LedgerManager:
                     | CloseEvent(cash_count=cash_count)
                     | CashCountEvent(cash_count=cash_count)
                 ):
-                    return cash_count
-        return CashCount(
-            yen_10000=0,
-            yen_5000=0,
-            yen_2000=0,
-            yen_1000=0,
-            yen_500=0,
-            yen_100=0,
-            yen_50=0,
-            yen_10=0,
-            yen_5=0,
-            yen_1=0,
-        )
+                    _cash_count = cash_count
+                    _last_event = entry
+                    break
+
+        for entry in self.after(id=_last_event.id if _last_event else 0):
+            match entry.event:
+                case (
+                    SaleEvent(cash_count=cash_count)
+                    | VoidEvent(cash_count=cash_count)
+                    | RefundEvent(cash_count=cash_count)
+                    | CashInEvent(cash_count=cash_count)
+                    | CashOutEvent(cash_count=cash_count)
+                ):
+                    _cash_count += cash_count
+
+        return _cash_count
 
     def current_boundary(self) -> int:
         "Ledgerのイベントから最後の締めIDを取得する．指定された会計が締め済みかどうかの判定などに使えます"

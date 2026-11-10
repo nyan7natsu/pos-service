@@ -16,55 +16,75 @@ class Cash(WebCog):
     async def slash_cash_in(
         self,
         interaction: nextcord.Interaction,
-        yen_10000: int | None = SlashOption(
+        yen_10000: int = SlashOption(
             name="yen_10000",
             description="Number of 10,000 yen bills",
             required=False,
+            min_value=0,
+            default=0,
         ),
-        yen_5000: int | None = SlashOption(
+        yen_5000: int = SlashOption(
             name="yen_5000",
             description="Number of 5,000 yen bills",
             required=False,
+            min_value=0,
+            default=0,
         ),
-        yen_2000: int | None = SlashOption(
+        yen_2000: int = SlashOption(
             name="yen_2000",
             description="Number of 2,000 yen bills",
             required=False,
+            min_value=0,
+            default=0,
         ),
-        yen_1000: int | None = SlashOption(
+        yen_1000: int = SlashOption(
             name="yen_1000",
             description="Number of 1,000 yen bills",
             required=False,
+            min_value=0,
+            default=0,
         ),
-        yen_500: int | None = SlashOption(
+        yen_500: int = SlashOption(
             name="yen_500",
             description="Number of 500 yen coins",
             required=False,
+            min_value=0,
+            default=0,
         ),
-        yen_100: int | None = SlashOption(
+        yen_100: int = SlashOption(
             name="yen_100",
             description="Number of 100 yen coins",
             required=False,
+            min_value=0,
+            default=0,
         ),
-        yen_50: int | None = SlashOption(
+        yen_50: int = SlashOption(
             name="yen_50",
             description="Number of 50 yen coins",
             required=False,
+            min_value=0,
+            default=0,
         ),
-        yen_10: int | None = SlashOption(
+        yen_10: int = SlashOption(
             name="yen_10",
             description="Number of 10 yen coins",
             required=False,
+            min_value=0,
+            default=0,
         ),
-        yen_5: int | None = SlashOption(
+        yen_5: int = SlashOption(
             name="yen_5",
             description="Number of 5 yen coins",
             required=False,
+            min_value=0,
+            default=0,
         ),
-        yen_1: int | None = SlashOption(
+        yen_1: int = SlashOption(
             name="yen_1",
             description="Number of 1 yen coins",
             required=False,
+            min_value=0,
+            default=0,
         ),
     ):
         await interaction.response.defer(ephemeral=True)
@@ -85,7 +105,16 @@ class Cash(WebCog):
         )
 
         amount = cash_count.total()
-        assert cash_count.is_only_positive(), "Amount must be positive"
+        if cash_count.is_only_negative() or amount <= 0:
+            await interaction.send(
+                embed=nextcord.Embed(
+                    title="Cash In Failed",
+                    description="Amount must be positive.",
+                    color=nextcord.Color.red(),
+                ).set_footer(text=f"cash_in_failed|{self.bot.app.conf['lease_label']}"),
+                ephemeral=True,
+            )
+            return
 
         event = CashInEvent(
             idempotency_key=str(interaction.id),
@@ -94,11 +123,12 @@ class Cash(WebCog):
             cash_delta=amount,
             discount=0,
             operator=interaction.user.id,
-            occurred_at=interaction.created_at.isoformat(),
+            occurred_at=interaction.created_at,
             cash_count=cash_count,
         )
 
-        await self.bot.app.ledger.append(event)
+        _, wait = await self.bot.app.ledger.append(event)
+        await wait  # Wait for the ledger to process the event
 
         all_amount = self.bot.app.ledger.expected_cash()
 
@@ -122,55 +152,75 @@ class Cash(WebCog):
     async def slash_cash_out(
         self,
         interaction: nextcord.Interaction,
-        yen_10000: int | None = SlashOption(
+        yen_10000: int = SlashOption(
             name="yen_10000",
             description="Number of 10,000 yen bills",
             required=False,
+            min_value=0,
+            default=0,
         ),
-        yen_5000: int | None = SlashOption(
+        yen_5000: int = SlashOption(
             name="yen_5000",
             description="Number of 5,000 yen bills",
             required=False,
+            min_value=0,
+            default=0,
         ),
-        yen_2000: int | None = SlashOption(
+        yen_2000: int = SlashOption(
             name="yen_2000",
             description="Number of 2,000 yen bills",
             required=False,
+            min_value=0,
+            default=0,
         ),
-        yen_1000: int | None = SlashOption(
+        yen_1000: int = SlashOption(
             name="yen_1000",
             description="Number of 1,000 yen bills",
             required=False,
+            min_value=0,
+            default=0,
         ),
-        yen_500: int | None = SlashOption(
+        yen_500: int = SlashOption(
             name="yen_500",
             description="Number of 500 yen coins",
             required=False,
+            min_value=0,
+            default=0,
         ),
-        yen_100: int | None = SlashOption(
+        yen_100: int = SlashOption(
             name="yen_100",
             description="Number of 100 yen coins",
             required=False,
+            min_value=0,
+            default=0,
         ),
-        yen_50: int | None = SlashOption(
+        yen_50: int = SlashOption(
             name="yen_50",
             description="Number of 50 yen coins",
             required=False,
+            min_value=0,
+            default=0,
         ),
-        yen_10: int | None = SlashOption(
+        yen_10: int = SlashOption(
             name="yen_10",
             description="Number of 10 yen coins",
             required=False,
+            min_value=0,
+            default=0,
         ),
-        yen_5: int | None = SlashOption(
+        yen_5: int = SlashOption(
             name="yen_5",
             description="Number of 5 yen coins",
             required=False,
+            min_value=0,
+            default=0,
         ),
-        yen_1: int | None = SlashOption(
+        yen_1: int = SlashOption(
             name="yen_1",
             description="Number of 1 yen coins",
             required=False,
+            min_value=0,
+            default=0,
         ),
     ):
         await interaction.response.defer(ephemeral=True)
@@ -191,7 +241,18 @@ class Cash(WebCog):
         )
 
         amount = cash_count.total()
-        assert cash_count.is_only_positive(), "Amount must be positive"
+        if cash_count.is_only_negative() or amount <= 0:
+            await interaction.send(
+                embed=nextcord.Embed(
+                    title="Cash Out Failed",
+                    description="Amount must be positive.",
+                    color=nextcord.Color.red(),
+                ).set_footer(
+                    text=f"cash_out_failed|{self.bot.app.conf['lease_label']}"
+                ),
+                ephemeral=True,
+            )
+            return
 
         all_amount = self.bot.app.ledger.expected_cash()
         expected_cash_count = self.bot.app.ledger.get_cash_count()
@@ -237,10 +298,11 @@ class Cash(WebCog):
             cash_delta=-amount,
             discount=0,
             operator=interaction.user.id,
-            occurred_at=interaction.created_at.isoformat(),
-            cash_count=cash_count,
+            occurred_at=interaction.created_at,
+            cash_count=-cash_count,
         )
-        await self.bot.app.ledger.append(event)
+        _, wait = await self.bot.app.ledger.append(event)
+        await wait
 
         new_total = all_amount - amount
 

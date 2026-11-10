@@ -8,15 +8,8 @@ from aiohttp.web import Request, Response, json_response
 from nextcord.ext import application_checks, commands
 
 from ..bot import BotApp
-from ..model import (
-    EventsSource,
-    EventsType,
-    LedgerEntry,
-    LedgerEvent,
-    SaleEvent,
-    SaleItem,
-    VoidEvent,
-)
+from ..model import (CashCount, EventsSource, EventsType, LedgerEntry,
+                     LedgerEvent, SaleEvent, SaleItem, VoidEvent)
 from ..webutil import WebCog, get, post
 
 _logger = getLogger(__name__)
@@ -24,8 +17,9 @@ _logger = getLogger(__name__)
 
 class SaleData(pydantic.BaseModel):
     idempotency_key: str = pydantic.Field(min_length=1, max_length=255)
-    items: tuple[SaleItem] = pydantic.Field(min_length=1)
+    items: tuple[SaleItem, ...] = pydantic.Field(min_length=1)
     discount: int = pydantic.Field(ge=0)
+    cash_count: "CashCount"
     occurred_at: datetime.datetime
 
     @pydantic.model_validator(mode="after")
@@ -35,10 +29,19 @@ class SaleData(pydantic.BaseModel):
             raise ValueError("値引きが小計を超えています")
         return self
 
+    @pydantic.model_validator(mode="after")
+    def check_cash_count(self) -> "SaleData":
+        total = sum(i.quantity * i.unit_price for i in self.items) - \
+            self.discount
+        if self.cash_count.total() != total:
+            raise ValueError(
+                f"現金計算の合計が小計と一致しません: {self.cash_count.total()} != {total}"
+            )
+        return self
+
 
 class VoidError(Exception):
-    "VOIDできない理由を表す例外"
-
+    "VOIDできないことを表す例外"
 
 class Sales(WebCog):
 
@@ -66,7 +69,7 @@ class Sales(WebCog):
             self.add_item(self.input)
 
         async def callback(self, interaction: nextcord.Interaction):
-            await interaction.response.defer(ephemeral=True)
+            await interaction.response.defer(ephemeral=True, with_message=True)
             reason = self.input.value
             if reason is None or reason.strip() == "":
                 await interaction.send("VOID理由を入力してください", ephemeral=True)
@@ -117,11 +120,13 @@ class Sales(WebCog):
 
         if target.id <= self.bot.app.ledger.current_boundary():
             raise VoidError("締め済みの会計です。レジマイナスで処理してください")
+
         if [
-            e.event.type == EventsType.VOID and e.event.ref_event_id == target.id
+            e
             for e in self.bot.app.ledger.after(
                 id=self.bot.app.ledger.current_boundary()
             )
+            if isinstance(e.event, VoidEvent) and e.event.ref_event_id == target.id
         ]:
             raise VoidError("すでにVOID済みです")
         return target
@@ -152,11 +157,12 @@ class Sales(WebCog):
                 discount=target.event.discount,
                 operator=operator,
                 ref_event_id=target.id,
-                occurred_at=occurred_at.isoformat(),
+                occurred_at=occurred_at,
                 reason=reason,
+                cash_count=-target.event.cash_count,
             )
 
-            await self.bot.app.ledger.append_with_unlock(lock, void)
+            await (await self.bot.app.ledger.append_with_unlock(lock, void))[1]
 
         return void
 
@@ -192,6 +198,11 @@ class Sales(WebCog):
             self.VoidModal(self, idempotency_key, message, interaction.id)
         )
 
+    @get("/api/products")
+    async def handle_get_products(self, _: Request) -> Response:
+        products = self.bot.app.product_manager.products
+        return json_response({"products": [p.model_dump() for p in products]})
+
     @post("/api/sale")
     async def handle_sale(self, request: Request) -> Response:
         password = request.headers.get("X-Auth-Password", "")
@@ -212,10 +223,25 @@ class Sales(WebCog):
         # 再送なら、前回の結果をそのまま返す
         existing = self.bot.app.ledger.find(idempotency_key=sale_data.idempotency_key)
         if existing:
+            await self.bot.app.ledger.wait_saved(ids=[existing.id])
             return json_response({"receipt_id": existing.id})
 
         if not self.bot.app.ledger.is_open():
             return json_response({"error": "register closed"}, status=409)
+
+        for item in sale_data.items:
+            product = self.bot.app.product_manager.get_product(item.product_id)
+            if product is None:
+                return json_response(
+                    {"error": f"unknown product {item.product_id}"}, status=422
+                )
+            if product.price != item.unit_price:
+                _logger.warning(
+                    "Price mismatch: #%s %s != %s",
+                    item.product_id,
+                    item.unit_price,
+                    product.price,
+                )
 
         total = (
             sum(i.quantity * i.unit_price for i in sale_data.items) - sale_data.discount
@@ -223,28 +249,43 @@ class Sales(WebCog):
 
         async with self.bot.app.ledger.transaction() as lock:
             # 一応もう一回チェック
-            existing = self.bot.app.ledger.find(
+            if not self.bot.app.ledger.is_open():
+                return json_response({"error": "register closed"}, status=409)
+
+            if existing := self.bot.app.ledger.find(
                 idempotency_key=sale_data.idempotency_key
+            ):
+                receipt_id = existing.id
+                wait = self.bot.app.ledger.wait_saved(ids=[existing.id])
+                new_entry = None
+
+            else:
+                entry, wait = await self.bot.app.ledger.append_with_unlock(
+                    lock,
+                    SaleEvent(
+                        idempotency_key=sale_data.idempotency_key,
+                        type=EventsType.SALE,
+                        source=EventsSource.POS,
+                        cash_delta=total,
+                        discount=sale_data.discount,
+                        occurred_at=sale_data.occurred_at,
+                        operator=0,
+                        items=sale_data.items,
+                        cash_count=sale_data.cash_count,
+                    )
+                )
+                new_entry = entry[0]
+                receipt_id = entry[0].id
+
+        await wait
+
+        if new_entry:
+            _logger.info(
+                "Sale processed: #%s %s",
+                receipt_id, new_entry.event.idempotency_key
             )
-            if existing:
-                return json_response({"receipt_id": existing.id})
-
-            event = SaleEvent(
-                idempotency_key=sale_data.idempotency_key,
-                type=EventsType.SALE,
-                source=EventsSource.POS,
-                cash_delta=total,
-                discount=sale_data.discount,
-                occurred_at=sale_data.occurred_at.isoformat(),
-                operator=0,
-                items=sale_data.items,
-            )
-
-            entry = await self.bot.app.ledger.append_with_unlock(lock, event)
-
-        _logger.info("Sale processed: #%s %s", entry[0].id, event.idempotency_key)
-        self.bot.dispatch("sale_processed", entry[0])
-        return json_response({"receipt_id": entry[0].id})
+            self.bot.dispatch("sale_processed", new_entry)
+        return json_response({"receipt_id": receipt_id})
 
 
 def setup(bot: BotApp):

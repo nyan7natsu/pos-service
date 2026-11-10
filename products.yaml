@@ -1,0 +1,7 @@
+products:
+  - id: 1
+    name: "Product A"
+    price: 1000
+  - id: 2
+    name: "Product B"
+    price: 2000
