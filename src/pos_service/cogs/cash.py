@@ -3,7 +3,8 @@ from nextcord import SlashOption
 from nextcord.ext import application_checks
 
 from ..bot import BotApp
-from ..model import CashCount, CashInEvent, CashOutEvent, EventsSource, EventsType
+from ..model import (CashCount, CashInEvent, CashOutEvent, EventsSource,
+                     EventsType)
 from ..webutil import WebCog
 
 
@@ -269,7 +270,7 @@ class Cash(WebCog):
             await interaction.send(
                 embed=nextcord.Embed(
                     title="Cash Out Failed",
-                    description=f"Invalid cash count: {', '.join(insuficient_fields)}. All counts must be non-negative.",
+                    description=f"Invalid cash count: {', '.join(insuficient_fields)}.\nAll counts must not exceed the available cash count.",
                     color=nextcord.Color.red(),
                 ).set_footer(
                     text=f"cash_out_failed|{self.bot.app.conf['lease_label']}"
@@ -282,7 +283,7 @@ class Cash(WebCog):
             await interaction.send(
                 embed=nextcord.Embed(
                     title="Cash Out Failed",
-                    description=f"Insufficient funds. Attempted to cash out {amount} yen, but only {all_amount} yen is available.",
+                    description=f"Cash out amount exceeds available cash.\nAvailable: ¥{all_amount}, Cash Out: ¥{amount}.",
                     color=nextcord.Color.red(),
                 ).set_footer(
                     text=f"cash_out_failed|{self.bot.app.conf['lease_label']}"
