@@ -1,15 +1,9 @@
-import typing
-
 import nextcord
-from aiohttp.web import Request, Response
-from nextcord.ext import application_checks, commands
+from nextcord.ext import commands
 
 from ..bot import BotApp
-from ..model import LedgerEntry, LedgerEvent, SaleEvent
-from ..webutil import WebCog, get
-
-if typing.TYPE_CHECKING:
-    from .sales import SaleData
+from ..model import LedgerEntry, SaleEvent
+from ..webutil import WebCog
 
 
 class PublicLog(WebCog):

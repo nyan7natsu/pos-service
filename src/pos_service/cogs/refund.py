@@ -3,9 +3,8 @@ from nextcord import SlashOption
 from nextcord.ext import application_checks
 
 from ..bot import BotApp
-from ..lib.product import Product
-from ..model import (CashCount, CashInEvent, CashOutEvent, EventsSource,
-                     EventsType, RefundEvent, RefundItem)
+from ..model import (CashCount, EventsSource, EventsType, RefundEvent,
+                     RefundItem)
 from ..webutil import WebCog
 
 

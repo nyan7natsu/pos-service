@@ -1,5 +1,4 @@
 import asyncio
-import os
 import signal
 import sys
 import typing
@@ -7,7 +6,8 @@ from logging import getLogger
 
 import aiohttp
 import nextcord
-from aiohttp.web import Application, AppRunner, HTTPFound, Request, Response, TCPSite
+from aiohttp.web import (Application, AppRunner, HTTPFound, Request, Response,
+                         TCPSite)
 
 from .auth import Authenticator
 from .bot import BotApp

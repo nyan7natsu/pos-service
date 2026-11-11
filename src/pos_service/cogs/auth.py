@@ -1,5 +1,4 @@
 import io
-from logging import getLogger
 
 import nextcord
 from aiohttp.web import Request, Response

@@ -1,9 +1,6 @@
 from typing import Final, Literal, NotRequired, TypedDict, cast
 
-import nextcord
 from nextcord.components import InteractiveComponent
-from nextcord.enums import ComponentType, TextInputStyle, try_enum
-from nextcord.types import components as comp_payloads
 from nextcord.utils import MISSING
 
 

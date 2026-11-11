@@ -1,7 +1,6 @@
 import typing
 from logging import getLogger
 
-import aiohttp
 import nextcord
 from nextcord.ext import commands
 
