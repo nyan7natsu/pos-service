@@ -617,10 +617,15 @@ class Register(WebCog):
 
         embed = nextcord.Embed(
             title=f"#{entries[0].id} Register Closed",
-            description=f"Reported cash count by {interaction.user.mention}. Total cash: {total} yen.\nExpected total cash: {excepted_total} yen.\nDifference: {total - excepted_total} yen.",
+            description=(
+                f"Reported cash: {total} yen.\n"
+                f"Expected cash: {excepted_total} yen. (Δ{total - excepted_total} yen)\n"
+            ),
             color=nextcord.Color.blue(),
         ).set_footer(
             text=f"z_report|{interaction.id}|{self.bot.app.conf['lease_label']}"
+        ).set_author(
+            name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url
         )
 
         [
