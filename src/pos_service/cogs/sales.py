@@ -43,8 +43,8 @@ class SaleData(pydantic.BaseModel):
 class VoidError(Exception):
     "VOIDできないことを表す例外"
 
-class Sales(WebCog):
 
+class Sales(WebCog):
     class VoidModal(nextcord.ui.Modal):
         def __init__(
             self,
@@ -101,6 +101,31 @@ class Sales(WebCog):
             )
             embed.set_footer(text=f"voided|{interaction.id}|{self.idempotency_key}")
             await self.message.edit(embed=embed)
+
+    async def sale_log(self, entry: LedgerEntry[SaleEvent]):
+        embed = (
+            nextcord.Embed(
+                title=f"#{entry.id}",
+                description=f"Sale processed successfully.\n"
+                + "\n".join(
+                    [
+                        f"**{item.product_id}** @ ¥{item.unit_price}x{item.quantity} (¥{item.unit_price * item.quantity})"
+                        for item in entry.event.items
+                    ]
+                ),
+                color=nextcord.Color.green(),
+            )
+            .add_field(name="Discount", value=f"¥{entry.event.discount}", inline=False)
+            .set_footer(
+                text=f"sale_processed|{entry.event.idempotency_key}|{self.bot.app.conf['lease_label']}"
+            )
+            .set_author(
+                name="POS Service",
+                icon_url="https://icons.getbootstrap.jp/assets/icons/cloud-check-fill.svg",
+            )
+        )
+
+        return await self.bot.send_log_channel(embed=embed)
 
     async def _get_voidable(self, target_key: str) -> LedgerEntry[SaleEvent]:
         "指定されたレシート番号の会計がVOID可能かどうかを確認し、可能ならそのLedgerEntryを返す。VOID不可ならVoidErrorを投げる"
@@ -284,7 +309,7 @@ class Sales(WebCog):
                 "Sale processed: #%s %s",
                 receipt_id, new_entry.event.idempotency_key
             )
-            self.bot.dispatch("sale_processed", new_entry)
+            await self.sale_log(new_entry)
         return json_response({"receipt_id": receipt_id})
 
 

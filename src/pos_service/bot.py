@@ -30,7 +30,7 @@ class BotApp(commands.Bot):
     async def send_log_channel(self, embed: nextcord.Embed):
         channel = await self.resolve_channel(self.app.conf["report_channel_id"])
         assert isinstance(channel, nextcord.TextChannel)
-        await channel.send(embed=embed)
+        return await channel.send(embed=embed)
 
     async def resolve_channel(
         self, channel_id: int
