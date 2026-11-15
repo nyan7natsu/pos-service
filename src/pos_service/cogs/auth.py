@@ -47,6 +47,5 @@ class Auth(WebCog):
         else:
             return Response(text="Unauthorized", status=401, content_type="text/plain")
 
-
 def setup(bot: BotApp):
     bot.add_cog(Auth(bot))

@@ -11,6 +11,7 @@ from aiohttp.web import (Application, AppRunner, HTTPFound, Request, Response,
 
 from .auth import Authenticator
 from .bot import BotApp
+from .lib.discord import DiscordAPI
 from .lib.ledger import LedgerManager
 from .lib.product import ProductManager
 from .webutil import Endpoint
@@ -29,6 +30,8 @@ class GeneralConfig(typing.TypedDict):
     lease_api_url: str
     lease_label: str
     report_channel_id: int
+    client_id: int
+    client_secret: str
 
 
 class POSService:
@@ -57,6 +60,7 @@ class POSService:
         self.authenticator = Authenticator()
         self.ledger = LedgerManager(pos=self, filename="ledger.jsonl")
         self.product_manager = ProductManager(pos=self, filename="products.yaml")
+        self.discord = DiscordAPI(pos=self)
 
         self.web = Application(loop=self.loop)
         self.bot = BotApp(
