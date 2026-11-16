@@ -72,6 +72,9 @@ def run():
 
     client_secret = os.getenv("CLIENT_SECRET", "")
 
+    operator_role_id_str = os.getenv("OPERATOR_ROLE_ID", "")
+    operator_role_id = int(operator_role_id_str) if operator_role_id_str else 0
+
     sys.setrecursionlimit(10000)
 
     pos = POSService(
@@ -87,6 +90,7 @@ def run():
             report_channel_id=report_channel_id,
             client_id=client_id,
             client_secret=client_secret,
+            operator_role_id=operator_role_id
         ),
     )
     pos.run()

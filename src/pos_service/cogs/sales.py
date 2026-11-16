@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import typing
 from logging import getLogger
@@ -21,6 +22,7 @@ class SaleData(pydantic.BaseModel):
     discount: int = pydantic.Field(ge=0)
     cash_count: "CashCount"
     occurred_at: datetime.datetime
+    operator: str = pydantic.Field(min_length=1, max_length=255)
 
     @pydantic.model_validator(mode="after")
     def check_discount(self) -> "SaleData":
@@ -45,6 +47,17 @@ class VoidError(Exception):
 
 
 class Sales(WebCog):
+    def __init__(self, bot: BotApp):
+        super().__init__(bot)
+        try:
+            self.operators: dict[str, int] = asyncio.get_running_loop().run_until_complete(
+                self.get_users_from_role_id(
+                    self.bot.app.conf["operator_role_id"])
+            )
+        except Exception as e:
+            self.logger.error("Failed to get operators: %s", e)
+            self.operators = {}
+
     class VoidModal(nextcord.ui.Modal):
         def __init__(
             self,
@@ -223,6 +236,71 @@ class Sales(WebCog):
             self.VoidModal(self, idempotency_key, message, interaction.id)
         )
 
+    async def get_users_from_role_id(self, role_id: int) -> dict[str, int]:
+        guild_id = self.bot.app.conf["guild_ids"][0]
+        guild = self.bot.get_guild(guild_id)
+        if not guild:
+            try:
+                guild = await self.bot.fetch_guild(guild_id)
+            except nextcord.NotFound:
+                raise RuntimeError("ギルドが見つかりません")
+        if not guild:
+            raise RuntimeError("ギルドが見つかりません")
+
+        role = guild.get_role(role_id)
+        if not role:
+            try:
+                role = await guild.fetch_role(role_id)
+            except nextcord.NotFound:
+                raise RuntimeError("ロールが見つかりません")
+        if not role:
+            raise RuntimeError("ロールが見つかりません")
+        return {member.display_name: member.id for member in role.members}
+
+    @nextcord.slash_command(name="operators")
+    async def slash_operators(self, interaction: nextcord.Interaction): ...
+
+    @application_checks.guild_only()
+    @slash_operators.subcommand(
+        name="update", description="Update the list of operators"
+    )
+    async def slash_operators_update(
+        self, interaction: nextcord.Interaction, operator_role: nextcord.Role = nextcord.SlashOption(
+            name="operator_role",
+            description="The role that represents operators",
+            required=True,
+        )
+    ):
+        assert isinstance(interaction.user, nextcord.User | nextcord.Member)
+        self.operators = {
+            member.display_name: member.id for member in operator_role.members
+        }
+        await interaction.send(
+            f"Operators updated.\nCurrent operators:\n\n- " +
+            "\n- ".join(self.operators.keys()),
+            ephemeral=True,
+        )
+
+    @application_checks.guild_only()
+    @slash_operators.subcommand(
+        name="list", description="List the current operators"
+    )
+    async def slash_operators_list(self, interaction: nextcord.Interaction):
+        assert isinstance(interaction.user, nextcord.User | nextcord.Member)
+        if not self.operators:
+            await interaction.send("No operators set.", ephemeral=True)
+            return
+        operator_list = "\n- ".join(self.operators.keys())
+        await interaction.send(
+            f"Current operators:\n\n- {operator_list}",
+            ephemeral=True,
+        )
+
+    @get("/api/operators")
+    async def handle_get_operators(self, _: Request) -> Response:
+        "レジを操作する事ができる担当者の，一覧を返すAPIエンドポイント"
+        return json_response({"operators": {k: str(v) for k, v in self.operators}})
+
     @get("/api/products")
     async def handle_get_products(self, _: Request) -> Response:
         products = self.bot.app.product_manager.products
@@ -294,7 +372,7 @@ class Sales(WebCog):
                         cash_delta=total,
                         discount=sale_data.discount,
                         occurred_at=sale_data.occurred_at,
-                        operator=0,
+                        operator=self.operators.get(sale_data.operator, 0),
                         items=sale_data.items,
                         cash_count=sale_data.cash_count,
                     )
@@ -309,7 +387,7 @@ class Sales(WebCog):
                 "Sale processed: #%s %s",
                 receipt_id, new_entry.event.idempotency_key
             )
-            await self.sale_log(new_entry)
+            asyncio.get_running_loop().create_task(self.sale_log(new_entry))
         return json_response({"receipt_id": receipt_id})
 
 

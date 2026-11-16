@@ -32,6 +32,7 @@ class GeneralConfig(typing.TypedDict):
     report_channel_id: int
     client_id: int
     client_secret: str
+    operator_role_id: int
 
 
 class POSService:
