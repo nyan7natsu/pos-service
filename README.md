@@ -132,12 +132,12 @@ POSサービスの状態を返すAPIです．
   "idempotency_key": "add6f466-72e8-4ee1-a33f-af1e7aa72650",
   "items": [
     {
-      "product_id": "product1",
+      "product_id": 1,
       "quantity": 2,
       "unit_price": 1000
     },
     {
-      "product_id": "product2",
+      "product_id": 2,
       "quantity": 1,
       "unit_price": 2000
     }
@@ -166,6 +166,9 @@ POSサービスの状態を返すAPIです．
     "receipt_id": 2
   }
   ```
+- 401 Unauthorized: ログイン失敗
+- 409 Conflict: レジが開局されていない場合
+- 422 Unprocessable Entity: リクエストボディの形式が不正な場合
 
 ### GET `/health`
 
