@@ -296,18 +296,20 @@ class Sales(WebCog):
             ephemeral=True,
         )
 
-    @get("/api/operators")
+    @get("/api/register/operators")
     async def handle_get_operators(self, _: Request) -> Response:
         "レジを操作する事ができる担当者の，一覧を返すAPIエンドポイント"
         return json_response({"operators": {k: str(v) for k, v in self.operators}})
 
-    @get("/api/products")
+    @get("/api/register/products")
     async def handle_get_products(self, _: Request) -> Response:
+        "販売可能な商品の一覧を返すAPIエンドポイント"
         products = self.bot.app.product_manager.products
         return json_response({"products": [p.model_dump() for p in products]})
 
-    @post("/api/sale")
+    @post("/api/register/sale")
     async def handle_sale(self, request: Request) -> Response:
+        "販売処理を行うAPIエンドポイント。販売処理の結果としてレシート番号を返す。再送の場合は前回の結果を返す。"
         password = request.headers.get("X-Auth-Password", "")
 
         if not self.bot.app.authenticator.check_password(password):

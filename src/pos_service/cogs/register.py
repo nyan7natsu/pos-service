@@ -647,6 +647,7 @@ class Register(WebCog):
 
     @get("/api/register/status")
     async def handle_register_status(self, request: Request) -> Response:
+        "レジの状態を返すAPIエンドポイント。レジが開いているかどうかと，現在の現金残高を返す。"
         password = request.headers.get("X-Auth-Password", "")
 
         if not self.bot.app.authenticator.check_password(password):

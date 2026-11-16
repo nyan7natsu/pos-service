@@ -44,6 +44,7 @@ class System(WebCog):
 
     @get("/api/health")
     async def handle_health(self, _: Request) -> Response:
+        "ヘルスチェック用のAPIエンドポイント"
         return Response(text="OK", content_type="text/plain")
 
 
