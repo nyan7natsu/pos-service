@@ -155,7 +155,7 @@ POSサービスの状態を返すAPIです．
     "yen_5": 0,
     "yen_1": 5
   },
-  "occured_at": "2024-06-01T12:00:00Z",
+  "occurred_at": "2024-06-01T12:00:00Z",
   "operator": "Operator01"
 }
 ```
