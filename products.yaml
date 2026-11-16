@@ -1,7 +1,43 @@
 products:
   - id: 1
-    name: "Product A"
-    price: 1000
+    name: 2種 (つぶ・こし)
+    price: 300
   - id: 2
-    name: "Product B"
-    price: 2000
+    name: つぶ・こし・カスタード
+    price: 400
+  - id: 3
+    name: つぶ・こし・抹茶
+    price: 400
+  - id: 4
+    name: 4種
+    price: 500
+  - id: 5
+    name: 2種+コーラ
+    price: 350
+  - id: 6
+    name: 2種+三ツ矢サイダー
+    price: 350
+  - id: 7
+    name: 2種+オレンジ
+    price: 350
+  - id: 8
+    name: 2種+緑茶
+    price: 300
+  - id: 9
+    name: 2種+紅茶
+    price: 300
+  - id: 10
+    name: コーラ
+    price: 100
+  - id: 11
+    name: 三ツ矢サイダー
+    price: 100
+  - id: 12
+    name: オレンジ
+    price: 100
+  - id: 13
+    name: 阿里山高山茶(台湾緑茶)
+    price: 100
+  - id: 14
+    name: 東方美人茶(台湾紅茶)
+    price: 100
