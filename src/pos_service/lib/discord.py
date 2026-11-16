@@ -40,13 +40,15 @@ class DiscordAPI:
 
     def __init__(self, pos: "POSService"):
         self.pos = pos
-        self.client_id: int = self.pos.bot.app.conf["client_id"]
         self.client_secret: str = self.pos.bot.app.conf["client_secret"]
 
     async def get_access_token(self, code: str, redirect_uri: str) -> AccessTokenResponse:
+        if self.pos.bot.user is None:
+            raise RuntimeError("Bot user is not ready")
+
         url = self.get_api_url("/oauth2/token")
         data = {
-            "client_id": self.client_id,
+            "client_id": self.pos.bot.user.id,
             "client_secret": self.client_secret,
             "grant_type": "authorization_code",
             "code": code,

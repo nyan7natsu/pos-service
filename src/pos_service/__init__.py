@@ -57,6 +57,13 @@ def run():
     guild_ids_str = os.getenv("GUILD_IDS", "")
     guild_ids = [int(gid) for gid in guild_ids_str.split(",") if gid]
 
+    if len(guild_ids) != 1:
+        logging.warning(
+            "GUILD_IDS should contain exactly one guild ID for slash command registration."
+        )
+
+    logging.info(f"Master guild ID: {guild_ids[0] if guild_ids else 'None'}")
+
     cogs_str = os.getenv("COGS", "")
     cogs = [cog.strip() for cog in cogs_str.split(",") if cog.strip()]
 
@@ -66,9 +73,6 @@ def run():
 
     report_channel_id_str = os.getenv("REPORT_CHANNEL_ID", "")
     report_channel_id = int(report_channel_id_str) if report_channel_id_str else 0
-
-    client_id_str = os.getenv("CLIENT_ID", "")
-    client_id = int(client_id_str) if client_id_str else 0
 
     client_secret = os.getenv("CLIENT_SECRET", "")
 
@@ -88,7 +92,6 @@ def run():
             lease_api_url=lease_api_url,
             lease_label=lease_label,
             report_channel_id=report_channel_id,
-            client_id=client_id,
             client_secret=client_secret,
             operator_role_id=operator_role_id
         ),

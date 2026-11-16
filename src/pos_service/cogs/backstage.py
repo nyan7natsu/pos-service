@@ -1,18 +1,18 @@
-import io
-
 import nextcord
 from aiohttp.web import HTTPFound, Request, Response
 from nextcord.ext import application_checks
 
 from ..bot import BotApp
-from ..webutil import WebCog, get, post
+from ..webutil import WebCog, get
 
 
 class BackStage(WebCog):
     @get("/api/backstage/discord/login")
     async def handler_discord_login(self, request: Request) -> Response:
+        if self.bot.user is None:
+            raise RuntimeError("Bot user is not ready")
         return HTTPFound(
-            f"https://discord.com/api/oauth2/authorize?client_id={self.bot.app.conf['client_id']}&redirect_uri={request.url.with_path('/api/backstage/discord/redirect')}&response_type=code&scope=identify"
+            f"https://discord.com/api/oauth2/authorize?client_id={self.bot.user.id}&redirect_uri={request.url.with_path('/api/backstage/discord/redirect')}&response_type=code&scope=identify"
         )
 
     @get("/api/backstage/discord/redirect")

@@ -30,7 +30,6 @@ class GeneralConfig(typing.TypedDict):
     lease_api_url: str
     lease_label: str
     report_channel_id: int
-    client_id: int
     client_secret: str
     operator_role_id: int
 
