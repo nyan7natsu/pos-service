@@ -24,7 +24,7 @@ class SaleData(pydantic.BaseModel):
     items: tuple[SaleItem, ...] = pydantic.Field(min_length=1)
     discount: int = pydantic.Field(ge=0)
     cash_count: "CashCount"
-    occurred_at: datetime.datetime
+    occurred_at: pydantic.AwareDatetime
     operator: str = pydantic.Field(min_length=1, max_length=255)
 
     @pydantic.model_validator(mode="after")
@@ -373,11 +373,7 @@ class Sales(WebCog):
             sale_data = SaleData.model_validate_json(await request.text())
         except pydantic.ValidationError as e:
             _logger.warning("Invalid sale data: %s", e)
-            return Response(
-                text=e.json(include_url=False),
-                status=422,
-                content_type="application/json",
-            )
+            return json_response({"error": "invalid request", "detail": e.errors()}, status=422)
 
         # 再送なら、前回の結果をそのまま返す
         existing = self.bot.app.ledger.find(idempotency_key=sale_data.idempotency_key)
