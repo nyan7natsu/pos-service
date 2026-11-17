@@ -6,7 +6,7 @@ from logging import getLogger
 import nextcord
 import pydantic
 from aiohttp.web import Request, Response, json_response
-from nextcord.ext import application_checks
+from nextcord.ext import application_checks, commands
 
 from ..bot import BotApp
 from ..model import (CashCount, EventsSource, EventsType, LedgerEntry,
@@ -47,12 +47,11 @@ class VoidError(Exception):
 
 
 class Sales(WebCog):
-    def __init__(self, bot: BotApp):
-        super().__init__(bot)
+    @commands.Cog.listener()
+    async def on_ready(self):
         try:
-            self.operators: dict[str, int] = asyncio.get_running_loop().run_until_complete(
-                self.get_users_from_role_id(
-                    self.bot.app.conf["operator_role_id"])
+            self.operators = await self.get_users_from_role_id(
+                self.bot.app.conf["operator_role_id"]
             )
         except Exception as e:
             self.logger.error("Failed to get operators: %s", e)
