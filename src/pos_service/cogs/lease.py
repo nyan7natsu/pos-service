@@ -32,16 +32,21 @@ class Lease(WebCog):
         ) as resp:
             if resp.status == 423:
                 _logger.warning("Lease expired! Exiting...")
-                self.bot.create_log_task(
-                    "",
-                    embed=nextcord.Embed(
-                        title="Lease Expired!",
-                        description="The lease has expired. The bot will shut down.",
-                        color=nextcord.Color.red(),
-                    ).set_footer(
-                        text=f"expired_log|{0}|{self.bot.app.conf['lease_label']}"
-                    ),
-                )
+                try:
+                    await self.bot.send_log_channel(
+                        "",
+                        embed=nextcord.Embed(
+                            title="Lease Expired!",
+                            description="The lease has expired. The bot will shut down.",
+                            color=nextcord.Color.red(),
+                        ).set_footer(
+                            text=f"expired_log|{0}|{self.bot.app.conf['lease_label']}"
+                        ),
+                    )
+                except Exception:
+                    _logger.exception(
+                        "Failed to send lease expired log message"
+                    )
                 self.bot.app.request_stop(False)
             elif resp.status != 200:
                 _logger.error("Lease renewal failed with status: %s", resp.status)
