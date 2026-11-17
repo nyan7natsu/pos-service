@@ -147,7 +147,7 @@ class Register(WebCog):
                 idempotency_key=idempotency_key,
                 type=EventsType.OPEN,
                 source=EventsSource.DISCORD,
-                cash_delta=cash_count.total(),
+                cash_delta=cash_count.total() - self.bot.app.ledger.expected_cash(),
                 discount=0,
                 operator=operator,
                 occurred_at=occurred_at,
