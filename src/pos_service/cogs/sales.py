@@ -15,6 +15,9 @@ from ..webutil import WebCog, get, post
 
 _logger = getLogger(__name__)
 
+if typing.TYPE_CHECKING:
+    from .backstage import BackStage
+
 
 class SaleData(pydantic.BaseModel):
     idempotency_key: str = pydantic.Field(min_length=1, max_length=255)
@@ -91,6 +94,7 @@ class Sales(WebCog):
 
             try:
                 void = await self.parent._void(
+                    EventsSource.DISCORD,
                     self.idempotency_key,
                     interaction.user.id,
                     str(self.interaction_id),
@@ -170,6 +174,7 @@ class Sales(WebCog):
 
     async def _void(
         self,
+        source: EventsSource,
         target_key: str,
         operator: int,
         idempotency_key: str,
@@ -181,6 +186,8 @@ class Sales(WebCog):
         if existing:
             if not isinstance(existing.event, VoidEvent):
                 raise RuntimeError("既存のイベントがVOIDイベントではありません")
+            wait = self.bot.app.ledger.wait_saved(ids=[existing.id])
+            await wait
             return existing.event
 
         async with self.bot.app.ledger.transaction() as lock:
@@ -189,7 +196,7 @@ class Sales(WebCog):
             void = VoidEvent(
                 idempotency_key=idempotency_key,
                 type=EventsType.VOID,
-                source=EventsSource.DISCORD,
+                source=source,
                 cash_delta=-target.event.cash_delta,
                 discount=target.event.discount,
                 operator=operator,
@@ -202,6 +209,44 @@ class Sales(WebCog):
             await (await self.bot.app.ledger.append_with_unlock(lock, void))[1]
 
         return void
+
+    @post("/api/backstage/void")
+    async def handle_void(self, request: Request) -> Response:
+        "VOID処理を行うAPIエンドポイント。VOID処理の結果としてVOIDイベントのIDを返す。再送の場合は前回の結果を返す。"
+
+        cog: "BackStage | None" = self.bot.get_cog("BackStage")  # type: ignore
+        if cog is None:
+            return json_response({"error": "backstage not loaded"}, status=500)
+
+        if not cog.is_session_valid(request):
+            return json_response({"error": "unauthorized"}, status=401)
+
+        try:
+            data = await request.json()
+            target_key = data["target_key"]
+            operator = cog.get_session_user_id(request)
+            if operator is None:
+                return json_response({"error": "unauthorized"}, status=401)
+            idempotency_key = data["idempotency_key"]
+            reason = data["reason"]
+            occurred_at = datetime.datetime.now()
+        except Exception as e:
+            _logger.warning("Invalid void data: %s", e)
+            return json_response({"error": "invalid request", "detail": str(e)}, status=422)
+
+        try:
+            void_event = await self._void(
+                EventsSource.BACKSTAGE,
+                target_key,
+                operator,
+                idempotency_key,
+                reason,
+                occurred_at
+            )
+        except VoidError as e:
+            return json_response({"error": str(e)}, status=409)
+
+        return json_response({"void_event_id": void_event.ref_event_id})
 
     @application_checks.guild_only()
     @nextcord.message_command(name="void")
@@ -296,13 +341,23 @@ class Sales(WebCog):
         )
 
     @get("/api/register/operators")
-    async def handle_get_operators(self, _: Request) -> Response:
+    async def handle_get_operators(self, request: Request) -> Response:
         "レジを操作する事ができる担当者の，一覧を返すAPIエンドポイント"
-        return json_response({"operators": {k: str(v) for k, v in self.operators}})
+        password = request.headers.get("X-Auth-Password", "")
+
+        if not self.bot.app.authenticator.check_password(password):
+            return json_response({"error": "unauthorized"}, status=401)
+
+        return json_response({"operators": {k: str(v) for k, v in self.operators.items()}})
 
     @get("/api/register/products")
-    async def handle_get_products(self, _: Request) -> Response:
+    async def handle_get_products(self, request: Request) -> Response:
         "販売可能な商品の一覧を返すAPIエンドポイント"
+        password = request.headers.get("X-Auth-Password", "")
+
+        if not self.bot.app.authenticator.check_password(password):
+            return json_response({"error": "unauthorized"}, status=401)
+
         products = self.bot.app.product_manager.products
         return json_response({"products": [p.model_dump() for p in products]})
 

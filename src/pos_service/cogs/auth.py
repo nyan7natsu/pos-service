@@ -1,7 +1,7 @@
 import io
 
 import nextcord
-from aiohttp.web import Request, Response
+from aiohttp.web import Request, Response, json_response
 from nextcord.ext import application_checks
 
 from ..bot import BotApp
@@ -43,10 +43,10 @@ class Auth(WebCog):
         "認証用のAPIエンドポイント。X-Auth-Passwordヘッダにパスワードを指定してアクセスする。"
         password = request.headers.get("X-Auth-Password", "")
 
-        if self.bot.app.authenticator.check_password(password):
-            return Response(text="OK", content_type="text/plain")
-        else:
-            return Response(text="Unauthorized", status=401, content_type="text/plain")
+        if not self.bot.app.authenticator.check_password(password):
+            return json_response({"error": "unauthorized"}, status=401)
+
+        return json_response({"status": "ok"})
 
 def setup(bot: BotApp):
     bot.add_cog(Auth(bot))

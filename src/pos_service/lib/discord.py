@@ -17,14 +17,6 @@ class AccessTokenResponse(pydantic.BaseModel):
 class UserInfoResponse(pydantic.BaseModel):
     id: str
     username: str
-    avatar: str | None
-    discriminator: str
-    public_flags: int
-    flags: int
-    email: str | None
-    verified: bool
-    locale: str
-    mfa_enabled: bool
 
 
 class DiscordAPI:
@@ -40,7 +32,7 @@ class DiscordAPI:
 
     def __init__(self, pos: "POSService"):
         self.pos = pos
-        self.client_secret: str = self.pos.bot.app.conf["client_secret"]
+        self.client_secret: str = self.pos.conf["client_secret"]
 
     async def get_access_token(self, code: str, redirect_uri: str) -> AccessTokenResponse:
         if self.pos.bot.user is None:
@@ -56,6 +48,9 @@ class DiscordAPI:
         }
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         async with self.pos.bot.app.session.post(url, data=data, headers=headers) as response:
+            if response.status != 200:
+                raise RuntimeError(
+                    f"Failed to get access token: {response.status}")
             return AccessTokenResponse(**await response.json())
 
     async def get_user_info(self, access_token: str) -> UserInfoResponse:

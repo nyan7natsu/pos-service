@@ -19,6 +19,7 @@ class EventsType(str, Enum):
 class EventsSource(str, Enum):
     POS = "pos"
     DISCORD = "discord"
+    BACKSTAGE = "backstage"
     OTHER = "other"
 
 

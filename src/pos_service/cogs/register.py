@@ -1,5 +1,7 @@
 import asyncio
-from typing import Any, Literal, override
+import datetime
+from logging import getLogger
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, override
 
 import nextcord
 from aiohttp.web import Request, Response, json_response
@@ -13,11 +15,19 @@ from ..model import (CashCount, CashCountEvent, CloseEvent, EventsSource,
 from ..ui import RadioGroup
 from ..webutil import WebCog, get, post
 
+if TYPE_CHECKING:
+    from .backstage import BackStage
+
+_logger = getLogger(__name__)
 
 class Register(WebCog):
     class MismatchModal(nextcord.ui.Modal):
-        result: asyncio.Future[tuple[Literal["adjust",
-                                             "ignore", "cancel"], nextcord.Interaction]]
+        result: asyncio.Future[
+            tuple[
+                Literal["adjust", "ignore", "cancel"],
+                nextcord.Interaction
+            ]
+        ]
 
         def __init__(
             self,
@@ -93,8 +103,10 @@ class Register(WebCog):
             ).get("component", None)
 
         async def callback(self, interaction: nextcord.Interaction):
-            assert isinstance(interaction.user,
-                              nextcord.User | nextcord.Member)
+            assert isinstance(
+                interaction.user,
+                nextcord.User | nextcord.Member
+            )
             assert interaction.data, "Interaction data is None"
 
             await interaction.response.defer(ephemeral=True, with_message=True)
@@ -119,6 +131,26 @@ class Register(WebCog):
 
     @nextcord.slash_command(name="register", description="Register operations")
     async def slash_register(self, _: nextcord.Interaction): ...
+
+    async def _open(
+        self,
+        cash_count: CashCount,
+        operator: int,
+        idempotency_key: str,
+        occurred_at: datetime.datetime,
+    ):
+        return await self.bot.app.ledger.append(
+            OpenEvent(
+                idempotency_key=idempotency_key,
+                type=EventsType.OPEN,
+                source=EventsSource.DISCORD,
+                cash_delta=cash_count.total(),
+                discount=0,
+                operator=operator,
+                occurred_at=occurred_at,
+                cash_count=cash_count,
+            )
+        )
 
     @application_checks.guild_only()
     @slash_register.subcommand(name="open", description="Open the register")
@@ -254,17 +286,11 @@ class Register(WebCog):
             )
             return
 
-        entries, wait = await self.bot.app.ledger.append(
-            OpenEvent(
-                idempotency_key=str(interaction.id),
-                type=EventsType.OPEN,
-                source=EventsSource.DISCORD,
-                cash_delta=total - excepted_total,
-                discount=0,
-                operator=interaction.user.id,
-                occurred_at=interaction.created_at,
-                cash_count=cash_count,
-            )
+        entries, wait = await self._open(
+            cash_count=cash_count,
+            operator=interaction.user.id,
+            idempotency_key=str(interaction.id),
+            occurred_at=interaction.created_at,
         )
 
         await wait
@@ -291,6 +317,65 @@ class Register(WebCog):
         )
 
         await self.bot.send_log_channel("", embed)
+
+    @post("/api/backstage/open")
+    async def handle_open(self, request: Request) -> Response:
+        "レジ開設処理を行うAPIエンドポイント。開設処理の結果として開設イベントのIDを返す。再送の場合は前回の結果を返す。"
+
+        cog: "BackStage | None" = self.bot.get_cog("BackStage")  # type: ignore
+        if cog is None:
+            return json_response({"error": "backstage not loaded"}, status=500)
+
+        if not cog.is_session_valid(request):
+            return json_response({"error": "unauthorized"}, status=401)
+
+        try:
+            data = await request.json()
+            cash_count_data = data["cash_count"]
+            cash_count = CashCount(**cash_count_data)
+            operator = cog.get_session_user_id(request)
+            if operator is None:
+                return json_response({"error": "unauthorized"}, status=401)
+            idempotency_key = data["idempotency_key"]
+            occurred_at = datetime.datetime.now()
+            ignore_mismatch = data.get("ignore_mismatch", False)
+        except Exception as e:
+            _logger.warning("Invalid open data: %s", e)
+            return json_response({"error": "invalid request", "detail": str(e)}, status=422)
+
+        excepted_total = self.bot.app.ledger.expected_cash()
+        total = cash_count.total()
+
+        last_event_id = self.bot.app.ledger.last_id()
+
+        if last_event_id != 0 and total != excepted_total and not ignore_mismatch:
+            return json_response(
+                {
+                    "error": "cash_count_mismatch",
+                    "detail": f"Reported total cash ({total} yen) does not match expected total cash ({excepted_total} yen). if you want to ignore this mismatch, set 'ignore_mismatch' to true.",
+                },
+                status=422,
+            )
+
+        if last_event_id != self.bot.app.ledger.last_id():
+            return json_response(
+                {
+                    "error": "register_state_changed",
+                    "detail": "The register state has changed since you started this operation. Please try again.",
+                },
+                status=409,
+            )
+
+        entries, wait = await self._open(
+            cash_count=cash_count,
+            operator=operator,
+            idempotency_key=idempotency_key,
+            occurred_at=occurred_at,
+        )
+
+        await wait
+
+        return json_response({"event_id": entries[0].id}, status=200)
 
     @application_checks.guild_only()
     @slash_register.subcommand(name="x_report", description="Report operation X")

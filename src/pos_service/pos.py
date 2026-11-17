@@ -7,7 +7,7 @@ from logging import getLogger
 import aiohttp
 import nextcord
 from aiohttp.web import (Application, AppRunner, HTTPFound, Request, Response,
-                         TCPSite)
+                         TCPSite, json_response)
 
 from .auth import Authenticator
 from .bot import BotApp
@@ -32,6 +32,8 @@ class GeneralConfig(typing.TypedDict):
     report_channel_id: int
     client_secret: str
     operator_role_id: int
+    admin_role_id: int
+    public_host: str
 
 
 class POSService:
@@ -106,7 +108,7 @@ class POSService:
         endpoint = Endpoint(method=request.method, url=request.path)
         handler = self.web_handler.get(endpoint)
         if handler is None:
-            return Response(status=404, text="Not Found")
+            return json_response({"error": "not found"}, status=404)
         return await handler(request)
 
     async def index_redirect(self, _) -> Response:

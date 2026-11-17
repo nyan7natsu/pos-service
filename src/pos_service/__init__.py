@@ -79,6 +79,11 @@ def run():
     operator_role_id_str = os.getenv("OPERATOR_ROLE_ID", "")
     operator_role_id = int(operator_role_id_str) if operator_role_id_str else 0
 
+    admin_role_id_str = os.getenv("ADMIN_ROLE_ID", "")
+    admin_role_id = int(admin_role_id_str) if admin_role_id_str else 0
+
+    public_host = os.getenv("PUBLIC_HOST", f"http://{host}:{port}")
+
     sys.setrecursionlimit(10000)
 
     pos = POSService(
@@ -93,7 +98,9 @@ def run():
             lease_label=lease_label,
             report_channel_id=report_channel_id,
             client_secret=client_secret,
-            operator_role_id=operator_role_id
+            operator_role_id=operator_role_id,
+            admin_role_id=admin_role_id,
+            public_host=public_host,
         ),
     )
     pos.run()
