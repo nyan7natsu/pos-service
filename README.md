@@ -52,7 +52,81 @@
 
 DiscordのOAuth2認証が完了した後にリダイレクトされるURLです．
 
-- 200 OK: Discordのユーザー情報
+- 200 OK: `/backstage`にリダイレクト (`/api/backstage`ではなく`/backstage`にリダイレクトされます)
+- 500 Internal Server Error: ユーザー情報が取得できなかった場合，またはPOSサービスがDiscordにログインできていない場合
+
+### GET `/backstage/discord/logout`
+
+DiscordのOAuth2認証をログアウトするためのURLです．
+
+- 200 OK: ログアウト完了のメッセージ
+
+### POST `/backstage/open`
+
+レジを開局するAPIです．
+
+リクエストボディは以下のようなJSON形式です．
+
+```json
+{
+  "idempotency_key": "add6f466-72e8-4ee1-a33f-af1e7aa72650",
+  "cash_count": {
+    "yen_10000": 1,
+    "yen_5000": 0,
+    "yen_2000": 0,
+    "yen_1000": 2,
+    "yen_500": 1,
+    "yen_100": 3,
+    "yen_50": 0,
+    "yen_10": 4,
+    "yen_5": 0,
+    "yen_1": 5
+  },
+  "ignore_mismatch": false
+}
+```
+
+想定されている現金残高と，指定された `cash_count` が一致しない場合はエラーが発生します．  
+この誤差が許容できる場合，または想定した誤差の場合は，`ignore_mismatch`を`true`にすることで無視して開局することができます．
+
+- 200 OK: 開局成功
+  ```json
+  {
+    "event_id": 1
+  }
+  ```
+- 400 Bad Request: リクエストが不正な場合
+- 401 Unauthorized: ログイン失敗
+- 409 Conflict: レジがすでに開局されている場合
+- 422 Unprocessable Entity: リクエストボディの形式が不正な場合，または想定金額と指定金額に誤差があるのにもかかわらず，`ignore_mismatch`が`false`の場合
+- 500 Internal Server Error: 認証サービスが利用できない場合
+
+### POST `/backstage/void`
+
+VOID処理を行うAPIです．
+
+リクエストボディは以下のようなJSON形式です．
+
+```json
+{
+  "idempotency_key": "add6f466-72e8-4ee1-a33f-af1e7aa72650",
+  "target_key": "add6f466-72e8-4ee1-a33f-af1e7aa72650",
+  "reason": "VOID処理の理由"
+}
+```
+
+`target_key`には，VOID処理を行う対象のレシートの`idempotency_key`を指定します．
+
+- 200 OK: VOID処理成功
+  ```json
+  {
+    "void_event_id": 1
+  }
+  ```
+- 401 Unauthorized: ログイン失敗
+- 409 Conflict: キーのイベントが見つからない場合，または対象のイベントがVOID済みの場合
+- 422 Unprocessable Entity: リクエストボディの形式が不正な場合
+- 500 Internal Server Error: 認証サービスが利用できない場合
 
 ### GET `/register/status`
 
@@ -90,12 +164,20 @@ POSサービスの状態を返すAPIです．
 - 200 OK: 担当者の一覧を返す
   ```json
   {
-    "operators": {
-      "operator1": "123456789012345678",
-      "operator2": "234567890123456789"
-    }
+    "operators": [
+      {
+        "id": "175928847299117063",
+        "name": "ユーザー1"
+      },
+      {
+        "id": "175928847300165639",
+        "name": "ユーザー2"
+      }
+    ]
   }
   ```
+
+`id`はDiscordのSnowflake IDであり，`name`はDiscordのサーバーでの表示名です．
 
 ### GET `/register/products`
 
@@ -106,12 +188,12 @@ POSサービスの状態を返すAPIです．
   {
     "products": [
       {
-        "id": "product1",
+        "id": 1,
         "name": "商品1",
         "price": 1000
       },
       {
-        "id": "product2",
+        "id": 2,
         "name": "商品2",
         "price": 2000
       }
@@ -156,7 +238,7 @@ POSサービスの状態を返すAPIです．
     "yen_1": 5
   },
   "occurred_at": "2024-06-01T12:00:00Z",
-  "operator": "Operator01"
+  "operator": "175928847299117063"
 }
 ```
 
