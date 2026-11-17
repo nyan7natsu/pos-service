@@ -50,6 +50,10 @@ class VoidError(Exception):
 
 
 class Sales(WebCog):
+    def __init__(self, bot: BotApp):
+        super().__init__(bot)
+        self.operators: list[tuple[str, int]] = []
+
     @commands.Cog.listener()
     async def on_ready(self):
         try:
@@ -58,7 +62,7 @@ class Sales(WebCog):
             )
         except Exception as e:
             self.logger.error("Failed to get operators: %s", e)
-            self.operators = {}
+            self.operators = []
 
     class VoidModal(nextcord.ui.Modal):
         def __init__(
@@ -280,7 +284,7 @@ class Sales(WebCog):
             self.VoidModal(self, idempotency_key, message, interaction.id)
         )
 
-    async def get_users_from_role_id(self, role_id: int) -> dict[str, int]:
+    async def get_users_from_role_id(self, role_id: int) -> list[tuple[str, int]]:
         guild_id = self.bot.app.conf["guild_ids"][0]
         guild = self.bot.get_guild(guild_id)
         if not guild:
@@ -299,7 +303,7 @@ class Sales(WebCog):
                 raise RuntimeError("ロールが見つかりません")
         if not role:
             raise RuntimeError("ロールが見つかりません")
-        return {member.display_name: member.id for member in role.members}
+        return [(member.display_name, member.id) for member in role.members]
 
     @nextcord.slash_command(name="operators")
     async def slash_operators(self, interaction: nextcord.Interaction): ...
@@ -309,19 +313,26 @@ class Sales(WebCog):
         name="update", description="Update the list of operators"
     )
     async def slash_operators_update(
-        self, interaction: nextcord.Interaction, operator_role: nextcord.Role = nextcord.SlashOption(
+        self,
+        interaction: nextcord.Interaction,
+        operator_role: nextcord.Role = nextcord.SlashOption(
             name="operator_role",
             description="The role that represents operators",
             required=True,
         )
     ):
         assert isinstance(interaction.user, nextcord.User | nextcord.Member)
-        self.operators = {
-            member.display_name: member.id for member in operator_role.members
-        }
+        self.operators = await self.get_users_from_role_id(operator_role.id)
         await interaction.send(
-            f"Operators updated.\nCurrent operators:\n\n- " +
-            "\n- ".join(self.operators.keys()),
+            "Operators updated.\n**Only in this session**. To make it permanent, please update the operator role in the guild or change the bot configuration.",
+            embed=nextcord.Embed(
+                title="Current Operators",
+                description="\n".join([
+                    f"- <@{user_id}>" for _,
+                    user_id in self.operators
+                ]),
+                color=nextcord.Color.green(),
+            ).set_footer(text=f"operators_updated|{interaction.id}|{self.bot.app.conf['lease_label']}"),
             ephemeral=True,
         )
 
@@ -334,9 +345,15 @@ class Sales(WebCog):
         if not self.operators:
             await interaction.send("No operators set.", ephemeral=True)
             return
-        operator_list = "\n- ".join(self.operators.keys())
         await interaction.send(
-            f"Current operators:\n\n- {operator_list}",
+            embed=nextcord.Embed(
+                title="Current Operators",
+                description="\n".join([
+                    f"- <@{user_id}>" for _,
+                    user_id in self.operators
+                ]),
+                color=nextcord.Color.blue(),
+            ).set_footer(text=f"operators_list|{interaction.id}|{self.bot.app.conf['lease_label']}"),
             ephemeral=True,
         )
 
@@ -348,7 +365,7 @@ class Sales(WebCog):
         if not self.bot.app.authenticator.check_password(password):
             return json_response({"error": "unauthorized"}, status=401)
 
-        return json_response({"operators": {k: str(v) for k, v in self.operators.items()}})
+        return json_response({"operators": [{"name": name, "id": str(user_id)} for name, user_id in self.operators]})
 
     @get("/api/register/products")
     async def handle_get_products(self, request: Request) -> Response:
@@ -415,6 +432,15 @@ class Sales(WebCog):
                 new_entry = None
 
             else:
+                ops = [
+                    user_id for _, user_id in self.operators if str(user_id) == sale_data.operator
+                ]
+                op = ops[0] if ops else 0
+                if op == 0:
+                    _logger.warning(
+                        "Unknown operator: %s",
+                        sale_data.operator
+                    )
                 entry, wait = await self.bot.app.ledger.append_with_unlock(
                     lock,
                     SaleEvent(
@@ -424,7 +450,7 @@ class Sales(WebCog):
                         cash_delta=total,
                         discount=sale_data.discount,
                         occurred_at=sale_data.occurred_at,
-                        operator=self.operators.get(sale_data.operator, 0),
+                        operator=op,
                         items=sale_data.items,
                         cash_count=sale_data.cash_count,
                     )
