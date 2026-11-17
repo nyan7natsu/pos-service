@@ -27,10 +27,10 @@ class BotApp(commands.Bot):
 
         _logger.info(f"Logged in as {self.user} ({self.user.id})")
 
-    async def send_log_channel(self, embed: nextcord.Embed):
+    async def send_log_channel(self, message: str, embed: nextcord.Embed):
         channel = await self.resolve_channel(self.app.conf["report_channel_id"])
         assert isinstance(channel, nextcord.TextChannel)
-        return await channel.send(embed=embed)
+        return await channel.send(message, embed=embed)
 
     async def resolve_channel(
         self, channel_id: int

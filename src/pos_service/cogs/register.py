@@ -290,7 +290,7 @@ class Register(WebCog):
             ephemeral=True,
         )
 
-        await self.bot.send_log_channel(embed)
+        await self.bot.send_log_channel("", embed)
 
     @application_checks.guild_only()
     @slash_register.subcommand(name="x_report", description="Report operation X")
@@ -464,7 +464,7 @@ class Register(WebCog):
             ephemeral=True,
         )
 
-        await self.bot.send_log_channel(embed)
+        await self.bot.send_log_channel("", embed)
 
     @application_checks.guild_only()
     @slash_register.subcommand(name="close", description="Close the register")
@@ -643,7 +643,7 @@ class Register(WebCog):
             ephemeral=True,
         )
 
-        await self.bot.send_log_channel(embed)
+        await self.bot.send_log_channel("", embed)
 
     @get("/api/register/status")
     async def handle_register_status(self, request: Request) -> Response:
