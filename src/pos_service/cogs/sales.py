@@ -141,7 +141,7 @@ class Sales(WebCog):
             )
         )
 
-        return await self.bot.send_log_channel("", embed=embed)
+        return self.bot.create_log_task("", embed=embed)
 
     async def _get_voidable(self, target_key: str) -> LedgerEntry[SaleEvent]:
         "指定されたレシート番号の会計がVOID可能かどうかを確認し、可能ならそのLedgerEntryを返す。VOID不可ならVoidErrorを投げる"

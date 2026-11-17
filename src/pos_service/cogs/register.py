@@ -319,7 +319,7 @@ class Register(WebCog):
             ephemeral=True,
         )
 
-        await self.bot.send_log_channel("", embed)
+        self.bot.create_log_task("", embed)
 
     @post("/api/backstage/open")
     async def handle_open(self, request: Request) -> Response:
@@ -552,7 +552,7 @@ class Register(WebCog):
             ephemeral=True,
         )
 
-        await self.bot.send_log_channel("", embed)
+        self.bot.create_log_task("", embed)
 
     @application_checks.guild_only()
     @slash_register.subcommand(name="close", description="Close the register")
@@ -731,7 +731,7 @@ class Register(WebCog):
             ephemeral=True,
         )
 
-        await self.bot.send_log_channel("", embed)
+        self.bot.create_log_task("", embed)
 
     @get("/api/register/status")
     async def handle_register_status(self, request: Request) -> Response:

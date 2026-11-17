@@ -32,7 +32,7 @@ class Lease(WebCog):
         ) as resp:
             if resp.status == 423:
                 _logger.warning("Lease expired! Exiting...")
-                await self.bot.send_log_channel(
+                self.bot.create_log_task(
                     "",
                     embed=nextcord.Embed(
                         title="Lease Expired!",

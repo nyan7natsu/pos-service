@@ -146,7 +146,7 @@ class Cash(WebCog):
             embed=embed,
             ephemeral=True,
         )
-        await self.bot.send_log_channel("", embed)
+        self.bot.create_log_task("", embed)
 
     @application_checks.guild_only()
     @slash_cash.subcommand(name="out", description="Cash out operation")
@@ -320,7 +320,7 @@ class Cash(WebCog):
             embed=embed,
             ephemeral=True,
         )
-        await self.bot.send_log_channel("", embed)
+        self.bot.create_log_task("", embed)
 
     @application_checks.guild_only()
     @slash_cash.subcommand(name="total", description="Check the total cash amount")

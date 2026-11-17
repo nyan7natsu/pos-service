@@ -16,6 +16,7 @@ class BotApp(commands.Bot):
     def __init__(self, app: "POSService", *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.app = app
+        self._log_tasks = set()
 
     async def on_ready(self):
         assert self.user
@@ -26,6 +27,11 @@ class BotApp(commands.Bot):
         )
 
         _logger.info(f"Logged in as {self.user} ({self.user.id})")
+
+    def create_log_task(self, message: str, embed: nextcord.Embed):
+        task = self.loop.create_task(self.send_log_channel(message, embed))
+        self._log_tasks.add(task)
+        task.add_done_callback(self._log_tasks.discard)
 
     async def send_log_channel(self, message: str, embed: nextcord.Embed):
         channel = await self.resolve_channel(self.app.conf["report_channel_id"])
