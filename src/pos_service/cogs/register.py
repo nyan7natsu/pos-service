@@ -124,8 +124,11 @@ class Register(WebCog):
                 self.result.set_result(("cancel", interaction))
                 return
 
-            value: Literal["adjust", "ignore", "cancel"] = comp.get(
-                "value")  # type: ignore
+            value: Literal[
+                "adjust",
+                "ignore",
+                "cancel"
+            ] = comp.get("value")  # type: ignore
 
             self.result.set_result((value, interaction))
 
