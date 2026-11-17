@@ -11,7 +11,7 @@ from ..webutil import WebCog, post
 
 class Auth(WebCog):
     async def get_qr_code(self) -> bytes:
-        return await generate_qr_bytes(self.bot.app.authenticator.get_password())
+        return await generate_qr_bytes(f"{self.bot.app.conf["public_host"]}?pw={self.bot.app.authenticator.get_password()}")
 
     @nextcord.slash_command(name="password")
     async def slash_password(self, _: nextcord.Interaction): ...
