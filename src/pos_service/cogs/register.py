@@ -369,6 +369,9 @@ class Register(WebCog):
                 status=409,
             )
 
+        if self.bot.app.ledger.is_open():
+            return json_response({"error": "register already open"}, status=409)
+
         entries, wait = await self._open(
             cash_count=cash_count,
             operator=operator,
