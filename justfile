@@ -32,3 +32,7 @@ install:
 # Run the backend tests
 test:
     uv run pytest
+
+run:
+    just build
+    uv run pos-service
