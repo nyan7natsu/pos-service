@@ -16,7 +16,7 @@ class Product(pydantic.BaseModel):
     id: int
     name: str
     price: int
-    category: str
+    category: str = ""
     enabled: bool = True
 
 
