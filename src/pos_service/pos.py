@@ -111,9 +111,13 @@ class POSService:
             return json_response({"error": "not found"}, status=404)
         return await handler(request)
 
-    async def index_redirect(self, _) -> Response:
+    async def index_redirect(self, request: Request) -> Response:
         "これを入れないと Forbidden になるか，ディレクトリの一覧が表示されてしまう..."
-        raise HTTPFound("/index.html")
+        params = request.rel_url.query_string
+        hashes = request.rel_url.fragment
+        raise HTTPFound(
+            f"/index.html?{params}#{hashes}"
+        )
 
     async def proxy_to_vite(self, request: Request) -> Response:
         "開発モード中は，フロントエンドへのリクエストはviteに流す"
