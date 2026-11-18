@@ -141,7 +141,6 @@ class Sales(WebCog):
             )
             .set_author(
                 name="POS Service",
-                icon_url="https://icons.getbootstrap.jp/assets/icons/cloud-check-fill.svg",
             )
         )
 
