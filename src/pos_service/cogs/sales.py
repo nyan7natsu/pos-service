@@ -129,7 +129,7 @@ class Sales(WebCog):
                 description=f"Sale processed successfully.\n"
                 + "\n".join(
                     [
-                        f"**{item.product_id}** @ ¥{item.unit_price}x{item.quantity} (¥{item.unit_price * item.quantity})"
+                        f"**{i.name if (i := self.bot.app.product_manager.get_product(item.product_id)) else item.product_id}** @ ¥{item.unit_price}x{item.quantity} (¥{item.unit_price * item.quantity})"
                         for item in entry.event.items
                     ]
                 ),
