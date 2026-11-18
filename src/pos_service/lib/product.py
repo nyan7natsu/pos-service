@@ -16,6 +16,8 @@ class Product(pydantic.BaseModel):
     id: int
     name: str
     price: int
+    category: str
+    enabled: bool = True
 
 
 class ProductManager:

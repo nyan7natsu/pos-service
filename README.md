@@ -190,12 +190,16 @@ POSサービスの状態を返すAPIです．
       {
         "id": 1,
         "name": "商品1",
-        "price": 1000
+        "price": 1000,
+        "category": "カテゴリ1",
+        "enabled": true
       },
       {
         "id": 2,
         "name": "商品2",
-        "price": 2000
+        "price": 2000,
+        "category": "カテゴリ2",
+        "enabled": true
       }
     ]
   }

@@ -375,7 +375,7 @@ class Sales(WebCog):
             return json_response({"error": "unauthorized"}, status=401)
 
         products = self.bot.app.product_manager.products
-        return json_response({"products": [p.model_dump() for p in products]})
+        return json_response({"products": [p.model_dump() for p in products if p.enabled]})
 
     @post("/api/register/sale")
     async def handle_sale(self, request: Request) -> Response:

@@ -2,42 +2,73 @@ products:
   - id: 1
     name: 2種 (つぶ・こし)
     price: 300
+    category: "まんじゅう"
+    enabled: true
   - id: 2
     name: つぶ・こし・カスタード
     price: 400
+    category: "まんじゅう"
+    enabled: true
   - id: 3
     name: つぶ・こし・抹茶
     price: 400
+    category: "まんじゅう"
+    enabled: true
   - id: 4
     name: 4種
     price: 500
+    category: "まんじゅう"
+    enabled: true
+
   - id: 5
     name: 2種+コーラ
     price: 350
+    category: "体験割引"
+    enabled: true
   - id: 6
     name: 2種+三ツ矢サイダー
     price: 350
+    category: "体験割引"
+    enabled: true
   - id: 7
     name: 2種+オレンジ
     price: 350
+    category: "体験割引"
+    enabled: true
   - id: 8
     name: 2種+緑茶
     price: 300
+    category: "体験割引"
+    enabled: true
   - id: 9
     name: 2種+紅茶
     price: 300
+    category: "体験割引"
+    enabled: true
+
   - id: 10
     name: コーラ
     price: 100
+    category: "ドリンク"
+    enabled: true
   - id: 11
     name: 三ツ矢サイダー
     price: 100
+    category: "ドリンク"
+    enabled: true
   - id: 12
     name: オレンジ
     price: 100
+    category: "ドリンク"
+    enabled: true
+
   - id: 13
     name: 阿里山高山茶(台湾緑茶)
     price: 100
+    category: "ドリンク"
+    enabled: true
   - id: 14
     name: 東方美人茶(台湾紅茶)
     price: 100
+    category: "ドリンク"
+    enabled: true
