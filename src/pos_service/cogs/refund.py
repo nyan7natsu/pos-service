@@ -266,7 +266,7 @@ class Refund(WebCog):
         )
         await interaction.send(embed=embed, ephemeral=True)
 
-        self.bot.create_log_task("", embed=embed)
+        self.bot.create_report_task("", embed=embed)
 
     @slash_refund.on_autocomplete("product_id")
     async def refund_product_autocomplete(
