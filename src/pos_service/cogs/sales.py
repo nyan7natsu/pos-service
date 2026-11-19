@@ -1,4 +1,3 @@
-import asyncio
 import datetime
 import typing
 from logging import getLogger
@@ -399,9 +398,7 @@ class Sales(WebCog):
     @get("/api/register/operators")
     async def handle_get_operators(self, request: Request) -> Response:
         "レジを操作する事ができる担当者の，一覧を返すAPIエンドポイント"
-        password = request.headers.get("X-Auth-Password", "")
-
-        if not self.bot.app.authenticator.check_password(password):
+        if not self.bot.app.authenticator.check_request(request):
             return json_response({"error": "unauthorized"}, status=401)
 
         return json_response({"operators": [{"name": name, "id": str(user_id)} for name, user_id in self.operators]})
@@ -409,20 +406,17 @@ class Sales(WebCog):
     @get("/api/register/products")
     async def handle_get_products(self, request: Request) -> Response:
         "販売可能な商品の一覧を返すAPIエンドポイント"
-        password = request.headers.get("X-Auth-Password", "")
-
-        if not self.bot.app.authenticator.check_password(password):
+        if not self.bot.app.authenticator.check_request(request):
             return json_response({"error": "unauthorized"}, status=401)
 
         products = self.bot.app.product_manager.products
         return json_response({"products": [p.model_dump() for p in products if p.enabled]})
 
+
     @post("/api/register/sale")
     async def handle_sale(self, request: Request) -> Response:
         "販売処理を行うAPIエンドポイント。販売処理の結果としてレシート番号を返す。再送の場合は前回の結果を返す。"
-        password = request.headers.get("X-Auth-Password", "")
-
-        if not self.bot.app.authenticator.check_password(password):
+        if not self.bot.app.authenticator.check_request(request):
             return json_response({"error": "unauthorized"}, status=401)
 
         try:

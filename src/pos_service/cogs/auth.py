@@ -41,9 +41,7 @@ class Auth(WebCog):
     @post("/api/auth")
     async def handler_check_password(self, request: Request) -> Response:
         "認証用のAPIエンドポイント。X-Auth-Passwordヘッダにパスワードを指定してアクセスする。"
-        password = request.headers.get("X-Auth-Password", "")
-
-        if not self.bot.app.authenticator.check_password(password):
+        if not self.bot.app.authenticator.check_request(request):
             return json_response({"error": "unauthorized"}, status=401)
 
         return json_response({"status": "ok"})

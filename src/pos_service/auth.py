@@ -3,6 +3,7 @@ import secrets
 import typing
 
 import aiofiles
+from aiohttp.web import Request
 
 
 class Authenticator:
@@ -44,3 +45,8 @@ class Authenticator:
     def mask_password(self, data: typing.Any) -> str:
         "パスワードをマスクします。"
         return str(data).replace(self.__password, "********")
+
+    def check_request(self, request: Request) -> bool:
+        "リクエストのX-Auth-Passwordヘッダを確認します。"
+        password = request.headers.get("X-Auth-Password", "")
+        return self.check_password(password)
