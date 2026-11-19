@@ -144,7 +144,7 @@ class Sales(WebCog):
             )
         )
 
-        return self.bot.create_log_task("", embed=embed)
+        self.bot.create_report_task("", embed=embed)
 
     async def _get_voidable(self, target_key: str) -> LedgerEntry[SaleEvent]:
         "指定されたレシート番号の会計がVOID可能かどうかを確認し、可能ならそのLedgerEntryを返す。VOID不可ならVoidErrorを投げる"
@@ -464,7 +464,8 @@ class Sales(WebCog):
                 "Sale processed: #%s %s",
                 receipt_id, new_entry.event.idempotency_key
             )
-            asyncio.get_running_loop().create_task(self.sale_log(new_entry))
+            self.sale_log(new_entry)
+
         return json_response({"receipt_id": receipt_id})
 
 

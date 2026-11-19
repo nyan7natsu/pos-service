@@ -74,6 +74,9 @@ def run():
     report_channel_id_str = os.getenv("REPORT_CHANNEL_ID", "")
     report_channel_id = int(report_channel_id_str) if report_channel_id_str else 0
 
+    log_channel_id_str = os.getenv("LOG_CHANNEL_ID", "")
+    log_channel_id = int(log_channel_id_str) if log_channel_id_str else 0
+
     client_secret = os.getenv("CLIENT_SECRET", "")
 
     operator_role_id_str = os.getenv("OPERATOR_ROLE_ID", "")
@@ -97,6 +100,7 @@ def run():
             lease_api_url=lease_api_url,
             lease_label=lease_label,
             report_channel_id=report_channel_id,
+            log_channel_id=log_channel_id,
             client_secret=client_secret,
             operator_role_id=operator_role_id,
             admin_role_id=admin_role_id,

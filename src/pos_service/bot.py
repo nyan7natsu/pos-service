@@ -17,7 +17,6 @@ class BotApp(commands.Bot):
     def __init__(self, app: "POSService", *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.app = app
-        self._log_tasks = set()
 
     async def on_ready(self):
         assert self.user
@@ -29,20 +28,17 @@ class BotApp(commands.Bot):
 
         _logger.info(f"Logged in as {self.user} ({self.user.id})")
 
-    def create_log_task(self, message: str, embed: nextcord.Embed):
-        task = self.loop.create_task(self.send_log_channel(message, embed))
-        self._log_tasks.add(task)
-        task.add_done_callback(self._on_log_task_done)
+    def create_report_task(self, message: str, embed: nextcord.Embed):
+        "レポートチャンネルにメッセージを送信するタスクを作成する"
+        self.app.create_task(
+            self.send_log_channel(
+                message, embed, self.app.conf["report_channel_id"]
+            ),
+            "bot_report"
+        )
 
-    def _on_log_task_done(self, task: asyncio.Task):
-        self._log_tasks.discard(task)
-        if task.cancelled():
-            return
-        if (exc := task.exception()) is not None:
-            _logger.error("Failed to send log message", exc_info=exc)
-
-    async def send_log_channel(self, message: str, embed: nextcord.Embed):
-        channel = await self.resolve_channel(self.app.conf["report_channel_id"])
+    async def send_log_channel(self, message: str, embed: nextcord.Embed, channel_id: int | None = None):
+        channel = await self.resolve_channel(channel_id if channel_id else self.app.conf["log_channel_id"])
         assert isinstance(channel, nextcord.TextChannel)
         return await channel.send(message, embed=embed)
 

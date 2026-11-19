@@ -30,6 +30,7 @@ class GeneralConfig(typing.TypedDict):
     lease_api_url: str
     lease_label: str
     report_channel_id: int
+    log_channel_id: int
     client_secret: str
     operator_role_id: int
     admin_role_id: int
@@ -56,6 +57,8 @@ class POSService:
         )
 
         self.loop = asyncio.new_event_loop()
+
+        self.tasks: set[asyncio.Task[typing.Any]] = set()
 
         self.__shutdown_event = asyncio.Event()
 
@@ -97,6 +100,24 @@ class POSService:
             self.bot.load_extension(cog)
 
         self.runner = AppRunner(self.web)
+
+    def _on_task_done(self, task: asyncio.Task):
+        if task.cancelled():
+            return
+        if (exc := task.exception()) is not None:
+            _logger.error("Task failed", exc_info=exc)
+        self.tasks.discard(task)
+
+    def create_task[T](
+        self,
+        coro: typing.Coroutine[typing.Any, typing.Any, T],
+        name: str | None = None,
+    ) -> asyncio.Task[T]:
+        "Coroutineをタスクとして登録してメインループで実行します．"
+        task = self.loop.create_task(coro, name=name)
+        self.tasks.add(task)
+        task.add_done_callback(self._on_task_done)
+        return task
 
     @property
     def session(self) -> aiohttp.ClientSession:
