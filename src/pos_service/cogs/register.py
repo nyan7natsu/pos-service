@@ -132,6 +132,28 @@ class Register(WebCog):
 
             self.result.set_result((value, interaction))
 
+    @get("/api/cash/threshold")
+    async def handle_cash_threshold(self, request: Request) -> Response:
+        "現在の現金在高の閾値を返すAPIエンドポイント"
+
+        if not self.bot.app.authenticator.check_request(request):
+            return json_response({"error": "unauthorized"}, status=401)
+
+        thresholds = self.bot.app.ledger.threshold
+
+        return json_response(thresholds.model_dump(), status=200)
+
+    @get("/api/cash/level")
+    async def handle_cash_level(self, request: Request) -> Response:
+        "現在の現金在高の状態を返すAPIエンドポイント"
+
+        if not self.bot.app.authenticator.check_request(request):
+            return json_response({"error": "unauthorized"}, status=401)
+
+        cash_level = self.bot.app.ledger.check_cash_level(skip_report=True)
+
+        return json_response(cash_level.model_dump(), status=200)
+
     @nextcord.slash_command(name="register", description="Register operations")
     async def slash_register(self, _: nextcord.Interaction): ...
 
