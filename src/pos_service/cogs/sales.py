@@ -113,19 +113,21 @@ class Sales(WebCog):
                 f"VOIDしました。レシート番号: {void.ref_event_id}", ephemeral=True
             )
             embed = self.message.embeds[0]
-            embed.title = f"[VOIDED] {embed.title}"
-            embed.color = nextcord.Color.yellow()
+            embed.title = f"{embed.title} [VOIDED]"
+            embed.color = nextcord.Color.dark_gray()
             embed.add_field(name="VOID理由", value=reason, inline=False)
             embed.add_field(
                 name="VOIDユーザー", value=interaction.user.mention, inline=False
             )
-            embed.set_footer(text=f"voided|{interaction.id}|{self.idempotency_key}")
+            embed.set_footer(
+                text=f"voided|{self.idempotency_key}|{self.parent.bot.app.conf['lease_label']}"
+            )
             await self.message.edit(embed=embed)
 
-    async def sale_log(self, entry: LedgerEntry[SaleEvent]):
+    def sale_log(self, entry: LedgerEntry[SaleEvent]):
         embed = (
             nextcord.Embed(
-                title=f"#{entry.id}",
+                title=f"#{entry.id} Sale",
                 description=f"Sale processed successfully.\n"
                 + "\n".join(
                     [
@@ -183,6 +185,7 @@ class Sales(WebCog):
         idempotency_key: str,
         reason: str,
         occurred_at: datetime.datetime,
+        message: nextcord.Message | None = None,
     ) -> VoidEvent:
         # 同じ操作の再送なら、前回の結果を返す
         existing = self.bot.app.ledger.find(idempotency_key=idempotency_key)
@@ -209,7 +212,44 @@ class Sales(WebCog):
                 cash_count=-target.event.cash_count,
             )
 
-            await (await self.bot.app.ledger.append_with_unlock(lock, void))[1]
+            entries, wait = await self.bot.app.ledger.append_with_unlock(lock, void)
+        await wait
+
+        if not message:
+            report_channel = await self.bot.resolve_channel(self.bot.app.conf["report_channel_id"])
+            if isinstance(report_channel, nextcord.TextChannel):
+                async for message in report_channel.history(limit=100):
+                    if (
+                        message.embeds
+                        and message.embeds[0].footer
+                        and message.embeds[0].footer.text
+                        and message.embeds[0].footer.text.startswith(
+                            f"sale_processed|{target.event.idempotency_key}|"
+                        )
+                    ):
+                        embed = message.embeds[0]
+                        embed.title = f"{embed.title} [VOIDED]"
+                        embed.color = nextcord.Color.dark_gray()
+                        embed.add_field(
+                            name="VOID理由", value=reason, inline=False)
+                        embed.add_field(
+                            name="VOIDユーザー", value=f"<@{operator}>", inline=False
+                        )
+                        embed.set_footer(
+                            text=f"voided|{idempotency_key}|{self.bot.app.conf['lease_label']}"
+                        )
+                        await message.edit(embed=embed)
+
+        embed = nextcord.Embed(
+            title=f"#{entries[0].id} VOID",
+            description=f"VOID processed successfully for sale #{target.id}.",
+            color=nextcord.Color.yellow(),
+        ).add_field(name="VOID理由", value=reason, inline=False).add_field(
+            name="VOIDユーザー", value=f"<@{operator}>", inline=False
+        ).set_footer(
+            text=f"voided|{idempotency_key}|{self.bot.app.conf['lease_label']}"
+        )
+        self.bot.create_report_task("", embed)
 
         return void
 
