@@ -1,11 +1,14 @@
 import asyncio
 import datetime
+import enum
 import os
 import typing
 from contextlib import asynccontextmanager
 from logging import getLogger
 
 import aiofiles
+import nextcord
+import pydantic
 
 from ..model import (CashCount, CashCountEvent, CashInEvent, CashOutEvent,
                      CloseEvent, LedgerEntry, LedgerEvent, OpenEvent,
@@ -13,17 +16,54 @@ from ..model import (CashCount, CashCountEvent, CashInEvent, CashOutEvent,
 from .lock import NamedLock
 
 if typing.TYPE_CHECKING:
-    from ..bot import BotApp
     from ..pos import POSService
 
 JST = datetime.timezone(datetime.timedelta(hours=9), name="JST")
+
+
+class CashThreshold(pydantic.BaseModel):
+    near_full: "CashCount" = pydantic.Field(description="ニアフルと判定する現金在高の閾値")
+    near_empty: "CashCount" = pydantic.Field(description="ニアエンプティと判定する現金在高の閾値")
+
+
+class CashLevelType(enum.StrEnum):
+    NORMAL = "normal"
+    NEAR_FULL = "near_full"
+    NEAR_EMPTY = "near_empty"
+
+
+class CashLevel(pydantic.BaseModel):
+    yen_10000: CashLevelType = CashLevelType.NORMAL
+    yen_5000: CashLevelType = CashLevelType.NORMAL
+    yen_2000: CashLevelType = CashLevelType.NORMAL
+    yen_1000: CashLevelType = CashLevelType.NORMAL
+    yen_500: CashLevelType = CashLevelType.NORMAL
+    yen_100: CashLevelType = CashLevelType.NORMAL
+    yen_50: CashLevelType = CashLevelType.NORMAL
+    yen_10: CashLevelType = CashLevelType.NORMAL
+    yen_5: CashLevelType = CashLevelType.NORMAL
+    yen_1: CashLevelType = CashLevelType.NORMAL
+
+    def near_full_denoms(self) -> list[str]:
+        return [
+            denom
+            for denom, status in self.model_dump().items()
+            if status == CashLevelType.NEAR_FULL
+        ]
+
+    def near_empty_denoms(self) -> list[str]:
+        return [
+            denom
+            for denom, status in self.model_dump().items()
+            if status == CashLevelType.NEAR_EMPTY
+        ]
 
 
 class LedgerManager:
     "Ledgerの管理クラス"
 
     def __init__(self, pos: "POSService", filename: str = "ledger.jsonl"):
-        self.pos = pos
+        self.app = pos
         self.logger = getLogger(f"{__name__}.lib.ledger")
         self.filename = filename
         self.write_failed: bool = False
@@ -35,10 +75,100 @@ class LedgerManager:
         self.wrote: list[int] = []
         self.exception: dict[int, Exception] = {}
 
+        self._last_levels: dict[str, CashLevelType] = {}
+        self.threshold = CashThreshold(
+            near_full=CashCount(
+                yen_10000=1000,
+                yen_5000=1000,
+                yen_2000=1000,
+                yen_1000=1000,
+                yen_500=1000,
+                yen_100=1000,
+                yen_50=1000,
+                yen_10=1000,
+                yen_5=1000,
+                yen_1=1000,
+            ),
+            near_empty=CashCount(
+                yen_10000=-1,
+                yen_5000=2,
+                yen_2000=-1,
+                yen_1000=10,
+                yen_500=10,
+                yen_100=20,
+                yen_50=20,
+                yen_10=20,
+                yen_5=0,
+                yen_1=0,
+            ),
+        )
+
+
     @asynccontextmanager
     async def transaction(self):
         async with self.__append_lock:
             yield self.__append_lock
+
+    def check_cash_level(self, skip_report: bool = False) -> CashLevel:
+        """
+        現在の現金在高の状態を返す。
+
+        Args:
+            skip_report (bool): Trueの場合、状態が変化してもレポートチャンネルに送信しない。デフォルトはFalse。
+
+        Returns:
+            CashLevel: 現在の現金在高の状態を表すCashLevelオブジェクト。
+        """
+
+        cash = self.app.ledger.get_cash_count()
+        levels: dict[str, CashLevelType] = {}
+        for key in CashCount.model_fields:
+            n: int | None = getattr(cash, key)  # 現在の現金在高
+            full: int | None = getattr(
+                self.threshold.near_full,
+                key
+            )  # そのnear_fullの閾値
+            empty: int | None = getattr(
+                self.threshold.near_empty,
+                key
+            )  # そのnear_emptyの閾値
+
+            if n is None or full is None or empty is None:
+                levels[key] = CashLevelType.NORMAL
+                continue
+
+            if full is not None and n >= full:
+                levels[key] = CashLevelType.NEAR_FULL
+            elif empty is not None and n <= empty:
+                levels[key] = CashLevelType.NEAR_EMPTY
+            else:
+                levels[key] = CashLevelType.NORMAL
+
+        if not skip_report:
+            changed = {
+                k: v for k, v in levels.items() if self._last_levels.get(k) != v
+            }
+            self._last_levels = levels
+
+            if any(v is not CashLevelType.NORMAL for v in changed.values()):
+                embed = nextcord.Embed(
+                    title="Cash Level Changed!",
+                    description="\n".join(
+                        [
+                            f"{k}: {getattr(cash, k)} ({v.value})"
+                            for k, v in changed.items()
+                        ]
+                    ),
+                    color=nextcord.Color.orange(),
+                ).set_footer(
+                    text=f"cash_level_changed|{self.app.conf['lease_label']}"
+                )
+                self.app.create_task(
+                    self.app.bot.send_log_channel("", embed)
+                )
+
+        return CashLevel(**levels)
+
 
     async def append[E: "LedgerEvent"](
         self, *event: E
@@ -67,6 +197,9 @@ class LedgerManager:
             )
             entries.append(entry)
             self.data.append(entry)
+
+        self.check_cash_level()
+
         await self.queue.put(entries)
 
         return (entries, self.wait_saved(ids=[e.id for e in entries]))
@@ -133,7 +266,7 @@ class LedgerManager:
                 self.logger.error(
                     f"Ledger entry ID mismatch: expected {i + 1}, got {entry.id}"
                 )
-                self.pos.request_stop()
+                self.app.request_stop()
                 raise RuntimeError(
                     f"Ledger entry ID mismatch: expected {i + 1}, got {entry.id}"
                 )
@@ -155,9 +288,11 @@ class LedgerManager:
             if all(id in self.wrote for id in ids):
                 return
             if self.write_failed:
-                self.pos.request_stop()
+                self.app.request_stop()
                 cause = next(
-                    (self.exception[id] for id in ids if id in self.exception), None)
+                    (self.exception[id] for id in ids if id in self.exception),
+                    None
+                )
                 raise RuntimeError("Failed to write ledger entry") from cause
             await asyncio.sleep(0.1)
 
@@ -195,7 +330,7 @@ class LedgerManager:
         return self.data[-1].id if self.data else 0
 
     def get_cash_count(self) -> CashCount:
-        "LedgerのイベントからOpenEventまたはCloseEventのCashCountを取得する"
+        "Ledgerのイベントから期待される現金の内訳を計算する"
         _cash_count: CashCount = CashCount()
         _last_event: LedgerEntry[LedgerEvent] | None = None
         for entry in reversed(self.data):
