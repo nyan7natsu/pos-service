@@ -128,13 +128,13 @@ class Cash(WebCog):
             cash_count=cash_count,
         )
 
-        _, wait = await self.bot.app.ledger.append(event)
+        entries, wait = await self.bot.app.ledger.append(event)
         await wait  # Wait for the ledger to process the event
 
         all_amount = self.bot.app.ledger.expected_cash()
 
         embed = nextcord.Embed(
-            title="Cash In",
+            title=f"#{entries[0].id} Cash In",
             description=f"Cashed in: {amount} yen\nTotal cash: {all_amount} yen",
             color=nextcord.Color.green(),
         ).set_footer(
@@ -302,13 +302,13 @@ class Cash(WebCog):
             occurred_at=interaction.created_at,
             cash_count=-cash_count,
         )
-        _, wait = await self.bot.app.ledger.append(event)
+        entries, wait = await self.bot.app.ledger.append(event)
         await wait
 
         new_total = all_amount - amount
 
         embed = nextcord.Embed(
-            title="Cash Out",
+            title=f"#{entries[0].id} Cash Out",
             description=f"Cashed out: {amount} yen\nTotal cash: {new_total} yen",
             color=nextcord.Color.orange(),
         ).set_footer(

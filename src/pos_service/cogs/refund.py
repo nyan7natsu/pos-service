@@ -251,10 +251,11 @@ class Refund(WebCog):
             ),)
         )
 
-        await (await self.bot.app.ledger.append(event))[1]
+        entries, wait = await self.bot.app.ledger.append(event)
+        await wait
 
         embed = nextcord.Embed(
-            title="Refund Processed",
+            title=f"#{entries[0].id} Refund Processed",
             description=f"Refund of ¥{amount} for product `{product.name}` (ID: {product_id}) processed successfully.",
             color=nextcord.Color.green(),
         ).set_footer(
