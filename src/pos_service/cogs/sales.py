@@ -270,15 +270,20 @@ class Sales(WebCog):
         if not cog.is_session_valid(request):
             return json_response({"error": "unauthorized"}, status=401)
 
+        entries = self.bot.app.ledger.after(
+            id=self.bot.app.ledger.current_boundary())
         sales = [
-            e for e in self.bot.app.ledger.after(id=self.bot.app.ledger.current_boundary())
+            e for e in entries
             if isinstance(e.event, SaleEvent)
         ]
+        voided = {
+            e.event.ref_event_id for e in entries if isinstance(e.event, VoidEvent)
+        }
         return json_response(
             {"sales": [e.model_dump(
                 mode="json",
                 context={"api": True}
-            ) for e in sales]},
+            ) | {"voided": e.id in voided} for e in sales]},
             status=200
         )
 
