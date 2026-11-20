@@ -843,6 +843,8 @@ class Register(WebCog):
             {
                 "is_open": is_open,
                 "cash_count": cash_count.model_dump() if cash_count else None,
+                "expected_cash": self.bot.app.ledger.expected_cash(),
+                "last_event_id": self.bot.app.ledger.last_id(),
             }
         )
 
