@@ -2,7 +2,7 @@ import datetime
 import secrets
 
 import nextcord
-from aiohttp.web import HTTPFound, Request, Response
+from aiohttp.web import HTTPFound, Request, Response, json_response
 from nextcord.ext import application_checks
 
 from ..bot import BotApp
@@ -15,16 +15,15 @@ class BackStage(WebCog):
 
     def __init__(self, bot: BotApp):
         super().__init__(bot)
-        self.__sessions: dict[str, tuple[int, datetime.datetime]] = {}
+        self.__sessions: dict[str, tuple[int, str, datetime.datetime]] = {}
 
-    def get_session_user_id(self, request: Request) -> int | None:
+    def get_session_data(self, request: Request) -> tuple[int, str, datetime.datetime] | None:
         session = request.cookies.get("backstage_session")
         if not session:
             return None
         if not self.is_session_key_valid(session):
             return None
-        user_id, _ = self.__sessions[session]
-        return user_id
+        return self.__sessions[session]
 
     def is_session_valid(self, request: Request) -> bool:
         session = request.cookies.get("backstage_session")
@@ -35,7 +34,7 @@ class BackStage(WebCog):
     def is_session_key_valid(self, session: str) -> bool:
         if session not in self.__sessions:
             return False
-        user_id, expires_at = self.__sessions[session]
+        user_id, user_name, expires_at = self.__sessions[session]
         if datetime.datetime.now(tz=JST) > expires_at:
             del self.__sessions[session]
             return False
@@ -50,6 +49,7 @@ class BackStage(WebCog):
         if any(role.id == self.bot.app.conf["admin_role_id"] for role in member.roles):
             self.__sessions[session] = (
                 user_id,
+                user_name,
                 datetime.datetime.now(tz=JST) + self.EXPIRES
             )
             return True
@@ -81,6 +81,7 @@ class BackStage(WebCog):
             session = secrets.token_urlsafe(32)
             self.__sessions[session] = (
                 int(user_info.id),
+                user_info.username,
                 datetime.datetime.now(tz=JST) + self.EXPIRES,
             )
 
@@ -105,6 +106,21 @@ class BackStage(WebCog):
         )
         resp.del_cookie("backstage_session")
         return resp
+
+    @get("/api/backstage/discord/session")
+    async def handler_discord_session(self, request: Request) -> Response:
+        if not self.is_session_valid(request):
+            return Response(text="No valid session", status=401, content_type="text/plain")
+
+        session = self.get_session_data(request)
+        if session is None:
+            return Response(text="No valid session", status=401, content_type="text/plain")
+
+        return json_response({
+            "user_id": session[0],
+            "user_name": session[1],
+            "expires_at": session[2].isoformat(),
+        })
 
     @nextcord.slash_command(name="backstage", description="Access the backstage")
     async def slash_backstage(self, interaction: nextcord.Interaction): ...

@@ -286,7 +286,7 @@ class Sales(WebCog):
         try:
             data = await request.json()
             target_key = data["target_key"]
-            operator = cog.get_session_user_id(request)
+            operator = cog.get_session_data(request)
             if operator is None:
                 return json_response({"error": "unauthorized"}, status=401)
             idempotency_key = data["idempotency_key"]
@@ -300,7 +300,7 @@ class Sales(WebCog):
             void_event = await self._void(
                 EventsSource.BACKSTAGE,
                 target_key,
-                operator,
+                operator[0],
                 idempotency_key,
                 reason,
                 occurred_at

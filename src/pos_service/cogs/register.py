@@ -359,7 +359,7 @@ class Register(WebCog):
             data = await request.json()
             cash_count_data = data["cash_count"]
             cash_count = CashCount(**cash_count_data)
-            operator = cog.get_session_user_id(request)
+            operator = cog.get_session_data(request)
             if operator is None:
                 return json_response({"error": "unauthorized"}, status=401)
             idempotency_key = data["idempotency_key"]
@@ -400,7 +400,7 @@ class Register(WebCog):
 
         entries, wait = await self._open(
             cash_count=cash_count,
-            operator=operator,
+            operator=operator[0],
             idempotency_key=idempotency_key,
             occurred_at=occurred_at,
         )
@@ -614,7 +614,7 @@ class Register(WebCog):
             data = await request.json()
             cash_count_data = data["cash_count"]
             cash_count = CashCount(**cash_count_data)
-            operator = cog.get_session_user_id(request)
+            operator = cog.get_session_data(request)
             if operator is None:
                 return json_response({"error": "unauthorized"}, status=401)
             idempotency_key = data["idempotency_key"]
@@ -643,7 +643,7 @@ class Register(WebCog):
 
         entries, wait = await self._report_x(
             cash_count=cash_count,
-            operator=operator,
+            operator=operator[0],
             source=EventsSource.BACKSTAGE,
             idempotency_key=idempotency_key,
             occurred_at=occurred_at,
