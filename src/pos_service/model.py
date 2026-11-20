@@ -3,7 +3,17 @@ import typing
 from enum import Enum
 
 import pydantic
+from pydantic import PlainSerializer, SerializationInfo
 
+
+def _discord_id(v: int, info: SerializationInfo):
+    return str(v) if info.context and info.context.get("api") else v
+
+
+type DiscordId = typing.Annotated[
+    int,
+    PlainSerializer(_discord_id, when_used="json")
+]
 
 class EventsType(str, Enum):
     SALE = "sale"
@@ -41,7 +51,7 @@ class LedgerEventBase(pydantic.BaseModel):
     source: EventsSource
     cash_delta: int
     discount: int
-    operator: int
+    operator: DiscordId
     occurred_at: datetime.datetime
 
 
