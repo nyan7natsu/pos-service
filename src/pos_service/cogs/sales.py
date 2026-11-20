@@ -275,7 +275,10 @@ class Sales(WebCog):
             if isinstance(e.event, SaleEvent)
         ]
         return json_response(
-            {"sales": [e.model_dump() for e in sales]},
+            {"sales": [e.model_dump(
+                mode="json",
+                context={"api": True}
+            ) for e in sales]},
             status=200
         )
 
