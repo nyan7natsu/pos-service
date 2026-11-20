@@ -369,6 +369,14 @@ class Register(WebCog):
             _logger.warning("Invalid open data: %s", e)
             return json_response({"error": "invalid request", "detail": str(e)}, status=422)
 
+        existing = self.bot.app.ledger.find(idempotency_key=idempotency_key)
+        if existing:
+            await self.bot.app.ledger.wait_saved(ids=[existing.id])
+            return cog.update_expires(
+                request.cookies.get("backstage_session", ""),
+                json_response({"event_id": existing.id}, status=200)
+            )
+
         excepted_total = self.bot.app.ledger.expected_cash()
         total = cash_count.total()
 
@@ -634,6 +642,14 @@ class Register(WebCog):
         except Exception as e:
             _logger.warning("Invalid x_report data: %s", e)
             return json_response({"error": "invalid request", "detail": str(e)}, status=422)
+
+        existing = self.bot.app.ledger.find(idempotency_key=idempotency_key)
+        if existing:
+            await self.bot.app.ledger.wait_saved(ids=[existing.id])
+            return cog.update_expires(
+                request.cookies.get("backstage_session", ""),
+                json_response({"event_id": existing.id}, status=200)
+            )
 
         if not self.bot.app.ledger.is_open():
             return cog.update_expires(
