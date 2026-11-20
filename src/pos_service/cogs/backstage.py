@@ -10,7 +10,7 @@ from ..webutil import WebCog, get
 
 
 class BackStage(WebCog):
-    EXPIRES: datetime.timedelta = datetime.timedelta(minutes=5)
+    EXPIRES: datetime.timedelta = datetime.timedelta(minutes=30)
 
     def __init__(self, bot: BotApp):
         super().__init__(bot)
