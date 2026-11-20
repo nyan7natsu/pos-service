@@ -857,7 +857,9 @@ class Register(WebCog):
     @get("/api/register/status")
     async def handle_register_status(self, request: Request) -> Response:
         "レジの状態を返すAPIエンドポイント。レジが開いているかどうかと，現在の現金残高を返す。"
-        if not self.bot.app.authenticator.check_request(request):
+        cog: "BackStage | None" = self.bot.get_cog("BackStage")  # type: ignore
+
+        if not self.bot.app.authenticator.check_request(request) and (cog is None or not cog.is_session_valid(request)):
             return json_response({"error": "unauthorized"}, status=401)
 
         is_open = self.bot.app.ledger.is_open()

@@ -433,7 +433,9 @@ class Sales(WebCog):
     @get("/api/register/products")
     async def handle_get_products(self, request: Request) -> Response:
         "販売可能な商品の一覧を返すAPIエンドポイント"
-        if not self.bot.app.authenticator.check_request(request):
+        cog: "BackStage | None" = self.bot.get_cog("BackStage")  # type: ignore
+
+        if not self.bot.app.authenticator.check_request(request) and (cog is None or not cog.is_session_valid(request)):
             return json_response({"error": "unauthorized"}, status=401)
 
         products = self.bot.app.product_manager.products
