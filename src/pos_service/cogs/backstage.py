@@ -84,7 +84,7 @@ class BackStage(WebCog):
                 datetime.datetime.now(tz=JST) + self.EXPIRES,
             )
 
-            resp = HTTPFound("/backstage")
+            resp = HTTPFound("/backstage.html")
             resp.set_cookie(
                 "backstage_session", session,
                 max_age=int(self.EXPIRES.total_seconds())
