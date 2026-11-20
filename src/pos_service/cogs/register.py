@@ -406,6 +406,27 @@ class Register(WebCog):
 
         return json_response({"event_id": entries[0].id}, status=200)
 
+    async def _report_x(
+        self,
+        cash_count: CashCount,
+        source: EventsSource,
+        operator: int,
+        idempotency_key: str,
+        occurred_at: datetime.datetime,
+    ):
+        return await self.bot.app.ledger.append(
+            CashCountEvent(
+                idempotency_key=idempotency_key,
+                type=EventsType.X,
+                source=source,
+                cash_delta=0,
+                discount=0,
+                operator=operator,
+                occurred_at=occurred_at,
+                cash_count=cash_count,
+            )
+        )
+
     @application_checks.guild_only()
     @slash_register.subcommand(name="x_report", description="Report operation X")
     async def slash_report_x(
@@ -540,17 +561,12 @@ class Register(WebCog):
             )
             return
 
-        entries, wait = await self.bot.app.ledger.append(
-            CashCountEvent(
-                idempotency_key=str(interaction.id),
-                type=EventsType.X,
-                source=EventsSource.DISCORD,
-                cash_delta=0,
-                discount=0,
-                operator=interaction.user.id,
-                occurred_at=interaction.created_at,
-                cash_count=cash_count,
-            ),
+        entries, wait = await self._report_x(
+            cash_count=cash_count,
+            operator=interaction.user.id,
+            source=EventsSource.DISCORD,
+            idempotency_key=str(interaction.id),
+            occurred_at=interaction.created_at,
         )
 
         await wait
@@ -579,6 +595,62 @@ class Register(WebCog):
         )
 
         self.bot.create_report_task("", embed)
+
+    @post("/api/backstage/x_report")
+    async def handle_x_report(self, request: Request) -> Response:
+        "レジX報告処理を行うAPIエンドポイント。X報告処理の結果としてイベントのIDを返す。再送の場合は前回の結果を返す。"
+
+        cog: "BackStage | None" = self.bot.get_cog("BackStage")  # type: ignore
+        if cog is None:
+            return json_response({"error": "backstage not loaded"}, status=500)
+
+        if not cog.is_session_valid(request):
+            return json_response({"error": "unauthorized"}, status=401)
+
+        try:
+            data = await request.json()
+            cash_count_data = data["cash_count"]
+            cash_count = CashCount(**cash_count_data)
+            operator = cog.get_session_user_id(request)
+            if operator is None:
+                return json_response({"error": "unauthorized"}, status=401)
+            idempotency_key = data["idempotency_key"]
+            occurred_at = datetime.datetime.now(tz=JST)
+        except Exception as e:
+            _logger.warning("Invalid x_report data: %s", e)
+            return json_response({"error": "invalid request", "detail": str(e)}, status=422)
+
+        if not self.bot.app.ledger.is_open():
+            return json_response({"error": "register closed"}, status=409)
+
+        expected_total = self.bot.app.ledger.expected_cash()
+        total = cash_count.total()
+
+        if total != expected_total:
+            return json_response(
+                {
+                    "error": "cash_count_mismatch",
+                    "detail": f"Reported total cash ({total} yen) does not match expected total cash ({expected_total} yen).",
+                    "expected": expected_total,
+                    "reported": total,
+                    "diff": total - expected_total,
+                },
+                status=422,
+            )
+
+        entries, wait = await self._report_x(
+            cash_count=cash_count,
+            operator=operator,
+            source=EventsSource.BACKSTAGE,
+            idempotency_key=idempotency_key,
+            occurred_at=occurred_at,
+        )
+
+        await wait
+
+        return json_response({
+            "event_id": entries[0].id
+        }, status=200)
 
     @application_checks.guild_only()
     @slash_register.subcommand(name="close", description="Close the register")
