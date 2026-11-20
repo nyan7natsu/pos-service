@@ -379,6 +379,9 @@ class Register(WebCog):
                 {
                     "error": "cash_count_mismatch",
                     "detail": f"Reported total cash ({total} yen) does not match expected total cash ({excepted_total} yen). if you want to ignore this mismatch, set 'ignore_mismatch' to true.",
+                    "expected": excepted_total,
+                    "reported": total,
+                    "diff": total - excepted_total,
                 },
                 status=422,
             )
