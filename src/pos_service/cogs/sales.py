@@ -253,6 +253,25 @@ class Sales(WebCog):
 
         return void
 
+    @get("/api/backstage/sales")
+    async def handle_get_sales(self, request: Request) -> Response:
+        "販売処理の一覧を返すAPIエンドポイント"
+        cog: "BackStage | None" = self.bot.get_cog("BackStage")  # type: ignore
+        if cog is None:
+            return json_response({"error": "backstage not loaded"}, status=500)
+
+        if not cog.is_session_valid(request):
+            return json_response({"error": "unauthorized"}, status=401)
+
+        sales = [
+            e for e in self.bot.app.ledger.after(id=self.bot.app.ledger.current_boundary())
+            if isinstance(e.event, SaleEvent)
+        ]
+        return json_response(
+            {"sales": [e.model_dump() for e in sales]},
+            status=200
+        )
+
     @post("/api/backstage/void")
     async def handle_void(self, request: Request) -> Response:
         "VOID処理を行うAPIエンドポイント。VOID処理の結果としてVOIDイベントのIDを返す。再送の場合は前回の結果を返す。"
