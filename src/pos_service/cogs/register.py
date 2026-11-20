@@ -436,13 +436,14 @@ class Register(WebCog):
         operator: int,
         idempotency_key: str,
         occurred_at: datetime.datetime,
+        cash_delta: int = 0
     ):
         return await self.bot.app.ledger.append(
             CashCountEvent(
                 idempotency_key=idempotency_key,
                 type=EventsType.X,
                 source=source,
-                cash_delta=0,
+                cash_delta=cash_delta,
                 discount=0,
                 operator=operator,
                 occurred_at=occurred_at,
@@ -639,6 +640,7 @@ class Register(WebCog):
                 return json_response({"error": "unauthorized"}, status=401)
             idempotency_key = data["idempotency_key"]
             occurred_at = datetime.datetime.now(tz=JST)
+            ignore_mismatch = data.get("ignore_mismatch", False)
         except Exception as e:
             _logger.warning("Invalid x_report data: %s", e)
             return json_response({"error": "invalid request", "detail": str(e)}, status=422)
@@ -660,6 +662,7 @@ class Register(WebCog):
         expected_total = self.bot.app.ledger.expected_cash()
         total = cash_count.total()
 
+        if total != expected_total and not ignore_mismatch:
             return cog.update_expires(
                 request.cookies.get("backstage_session", ""),
                 json_response(
@@ -680,6 +683,7 @@ class Register(WebCog):
             source=EventsSource.BACKSTAGE,
             idempotency_key=idempotency_key,
             occurred_at=occurred_at,
+            cash_delta=total - expected_total
         )
 
         await wait
