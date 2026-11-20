@@ -375,28 +375,37 @@ class Register(WebCog):
         last_event_id = self.bot.app.ledger.last_id()
 
         if last_event_id != 0 and total != excepted_total and not ignore_mismatch:
-            return json_response(
-                {
-                    "error": "cash_count_mismatch",
-                    "detail": f"Reported total cash ({total} yen) does not match expected total cash ({excepted_total} yen). if you want to ignore this mismatch, set 'ignore_mismatch' to true.",
-                    "expected": excepted_total,
-                    "reported": total,
-                    "diff": total - excepted_total,
-                },
-                status=422,
+            return cog.update_expires(
+                request.cookies.get("backstage_session", ""),
+                json_response(
+                    {
+                        "error": "cash_count_mismatch",
+                        "detail": f"Reported total cash ({total} yen) does not match expected total cash ({excepted_total} yen). if you want to ignore this mismatch, set 'ignore_mismatch' to true.",
+                        "expected": excepted_total,
+                        "reported": total,
+                        "diff": total - excepted_total,
+                    },
+                    status=422,
+                )
             )
 
         if last_event_id != self.bot.app.ledger.last_id():
-            return json_response(
-                {
-                    "error": "register_state_changed",
-                    "detail": "The register state has changed since you started this operation. Please try again.",
-                },
-                status=409,
+            return cog.update_expires(
+                request.cookies.get("backstage_session", ""),
+                json_response(
+                    {
+                        "error": "register_state_changed",
+                        "detail": "The register state has changed since you started this operation. Please try again.",
+                    },
+                    status=409,
+                )
             )
 
         if self.bot.app.ledger.is_open():
-            return json_response({"error": "register already open"}, status=409)
+            return cog.update_expires(
+                request.cookies.get("backstage_session", ""),
+                json_response({"error": "register already open"}, status=409)
+            )
 
         entries, wait = await self._open(
             cash_count=cash_count,
@@ -407,7 +416,10 @@ class Register(WebCog):
 
         await wait
 
-        return json_response({"event_id": entries[0].id}, status=200)
+        return cog.update_expires(
+            request.cookies.get("backstage_session", ""),
+            json_response({"event_id": entries[0].id}, status=200)
+        )
 
     async def _report_x(
         self,
@@ -624,21 +636,26 @@ class Register(WebCog):
             return json_response({"error": "invalid request", "detail": str(e)}, status=422)
 
         if not self.bot.app.ledger.is_open():
-            return json_response({"error": "register closed"}, status=409)
+            return cog.update_expires(
+                request.cookies.get("backstage_session", ""),
+                json_response({"error": "register closed"}, status=409)
+            )
 
         expected_total = self.bot.app.ledger.expected_cash()
         total = cash_count.total()
 
-        if total != expected_total:
-            return json_response(
-                {
-                    "error": "cash_count_mismatch",
-                    "detail": f"Reported total cash ({total} yen) does not match expected total cash ({expected_total} yen).",
-                    "expected": expected_total,
-                    "reported": total,
-                    "diff": total - expected_total,
-                },
-                status=422,
+            return cog.update_expires(
+                request.cookies.get("backstage_session", ""),
+                json_response(
+                    {
+                        "error": "cash_count_mismatch",
+                        "detail": f"Reported total cash ({total} yen) does not match expected total cash ({expected_total} yen).",
+                        "expected": expected_total,
+                        "reported": total,
+                        "diff": total - expected_total,
+                    },
+                    status=422,
+                )
             )
 
         entries, wait = await self._report_x(
@@ -651,9 +668,12 @@ class Register(WebCog):
 
         await wait
 
-        return json_response({
-            "event_id": entries[0].id
-        }, status=200)
+        return cog.update_expires(
+            request.cookies.get("backstage_session", ""),
+            json_response({
+                "event_id": entries[0].id
+            }, status=200)
+        )
 
     @application_checks.guild_only()
     @slash_register.subcommand(name="close", description="Close the register")

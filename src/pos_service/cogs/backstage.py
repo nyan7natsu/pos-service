@@ -17,6 +17,21 @@ class BackStage(WebCog):
         super().__init__(bot)
         self.__sessions: dict[str, tuple[int, str, datetime.datetime]] = {}
 
+    def update_expires(self, session: str, response: Response) -> Response:
+        if session in self.__sessions:
+            user_id, user_name, _ = self.__sessions[session]
+            self.__sessions[session] = (
+                user_id,
+                user_name,
+                datetime.datetime.now(tz=JST) + self.EXPIRES,
+            )
+            response.set_cookie(
+                "backstage_session",
+                session,
+                max_age=int(self.EXPIRES.total_seconds())
+            )
+        return response
+
     def get_session_data(self, request: Request) -> tuple[int, str, datetime.datetime] | None:
         session = request.cookies.get("backstage_session")
         if not session:
@@ -87,7 +102,8 @@ class BackStage(WebCog):
 
             resp = HTTPFound("/backstage.html")
             resp.set_cookie(
-                "backstage_session", session,
+                "backstage_session",
+                session,
                 max_age=int(self.EXPIRES.total_seconds())
             )
             return resp
@@ -116,11 +132,11 @@ class BackStage(WebCog):
         if session is None:
             return Response(text="No valid session", status=401, content_type="text/plain")
 
-        return json_response({
-            "user_id": session[0],
+        return self.update_expires(request.cookies.get("backstage_session", ""), json_response({
+            "user_id": str(session[0]),
             "user_name": session[1],
             "expires_at": session[2].isoformat(),
-        })
+        }))
 
     @nextcord.slash_command(name="backstage", description="Access the backstage")
     async def slash_backstage(self, interaction: nextcord.Interaction): ...
