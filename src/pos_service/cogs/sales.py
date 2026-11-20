@@ -125,6 +125,7 @@ class Sales(WebCog):
             await self.message.edit(embed=embed)
 
     def sale_log(self, entry: LedgerEntry[SaleEvent]):
+        user = self.bot.get_user(entry.event.operator)
         embed = (
             nextcord.Embed(
                 title=f"#{entry.id} Sale",
@@ -141,10 +142,16 @@ class Sales(WebCog):
             .set_footer(
                 text=f"sale_processed|{entry.event.idempotency_key}|{self.bot.app.conf['lease_label']}"
             )
-            .set_author(
-                name="POS Service",
-            )
         )
+        if user:
+            embed.set_author(
+                name=user.display_name,
+                icon_url=user.display_avatar.url
+            )
+        else:
+            embed.set_author(
+                name=f"Operator ID: {entry.event.operator} (not found)",
+            )
 
         self.bot.create_report_task("", embed=embed)
 
