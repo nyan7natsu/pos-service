@@ -8,6 +8,7 @@ from aiohttp.web import Request, Response, json_response
 from nextcord.ext import application_checks, commands
 
 from ..bot import BotApp
+from ..lib.ledger import JST
 from ..model import (CashCount, EventsSource, EventsType, LedgerEntry,
                      SaleEvent, SaleItem, VoidEvent)
 from ..webutil import WebCog, get, post
@@ -271,7 +272,7 @@ class Sales(WebCog):
                 return json_response({"error": "unauthorized"}, status=401)
             idempotency_key = data["idempotency_key"]
             reason = data["reason"]
-            occurred_at = datetime.datetime.now()
+            occurred_at = datetime.datetime.now(tz=JST)
         except Exception as e:
             _logger.warning("Invalid void data: %s", e)
             return json_response({"error": "invalid request", "detail": str(e)}, status=422)

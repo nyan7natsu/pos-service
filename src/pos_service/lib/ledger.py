@@ -192,7 +192,7 @@ class LedgerManager:
                     f"Duplicate idempotency key: {e.idempotency_key}")
             entry = LedgerEntry(
                 id=self.last_id() + 1,
-                recorded_at=datetime.datetime.now().astimezone(JST),
+                recorded_at=datetime.datetime.now(tz=JST),
                 event=e,
             )
             entries.append(entry)

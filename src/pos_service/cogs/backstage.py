@@ -6,6 +6,7 @@ from aiohttp.web import HTTPFound, Request, Response
 from nextcord.ext import application_checks
 
 from ..bot import BotApp
+from ..lib.ledger import JST
 from ..webutil import WebCog, get
 
 
@@ -35,7 +36,7 @@ class BackStage(WebCog):
         if session not in self.__sessions:
             return False
         user_id, expires_at = self.__sessions[session]
-        if datetime.datetime.now() > expires_at:
+        if datetime.datetime.now(tz=JST) > expires_at:
             del self.__sessions[session]
             return False
 
@@ -47,6 +48,10 @@ class BackStage(WebCog):
             return False
 
         if any(role.id == self.bot.app.conf["admin_role_id"] for role in member.roles):
+            self.__sessions[session] = (
+                user_id,
+                datetime.datetime.now(tz=JST) + self.EXPIRES
+            )
             return True
 
         return False
@@ -76,7 +81,7 @@ class BackStage(WebCog):
             session = secrets.token_urlsafe(32)
             self.__sessions[session] = (
                 int(user_info.id),
-                datetime.datetime.now() + self.EXPIRES,
+                datetime.datetime.now(tz=JST) + self.EXPIRES,
             )
 
             resp = HTTPFound("/backstage")

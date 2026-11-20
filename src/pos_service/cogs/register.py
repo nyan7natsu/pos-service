@@ -10,6 +10,7 @@ from nextcord.ext import application_checks
 from nextcord.types import interactions
 
 from ..bot import BotApp
+from ..lib.ledger import JST
 from ..model import (CashCount, CashCountEvent, CloseEvent, EventsSource,
                      EventsType, OpenEvent)
 from ..ui import RadioGroup
@@ -362,7 +363,7 @@ class Register(WebCog):
             if operator is None:
                 return json_response({"error": "unauthorized"}, status=401)
             idempotency_key = data["idempotency_key"]
-            occurred_at = datetime.datetime.now()
+            occurred_at = datetime.datetime.now(tz=JST)
             ignore_mismatch = data.get("ignore_mismatch", False)
         except Exception as e:
             _logger.warning("Invalid open data: %s", e)
