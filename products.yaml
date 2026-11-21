@@ -175,29 +175,37 @@ products:
     category: "単品"
     enabled: true
     items:
-      - product_name: こしあん
+      - product_name: 中華小麦パン
         quantity: 1
+      - product_name: こしあん
+        quantity: 10
   - id: 16
     name: つぶあん（単品）
     price: 100
     category: "単品"
     enabled: true
     items:
-      - product_name: つぶあん
+      - product_name: 中華小麦パン
         quantity: 1
+      - product_name: つぶあん
+        quantity: 10
   - id: 17
     name: カスタードクリーム（単品）
     price: 100
     category: "単品"
     enabled: true
     items:
-      - product_name: カスタードクリーム
+      - product_name: 中華小麦パン
         quantity: 1
+      - product_name: カスタードクリーム
+        quantity: 10
   - id: 18
     name: 抹茶あん（単品）
     price: 100
     category: "単品"
     enabled: true
     items:
-      - product_name: 抹茶あん
+      - product_name: 中華小麦パン
         quantity: 1
+      - product_name: 抹茶あん
+        quantity: 10
