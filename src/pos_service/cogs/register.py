@@ -946,6 +946,14 @@ class Register(WebCog):
                     value=f"Total Cash: {entry.event.cash_count.total()} yen\nExpected Cash: {self.bot.app.ledger.expected_cash()} yen\nDifference: {entry.event.cash_count.total() - self.bot.app.ledger.expected_cash()} yen",
                     inline=False,
                 )
+                embed.add_field(
+                    name="Cash Detail",
+                    value="\n".join(
+                        f"- {name.split('_')[1]} yen: {getattr(entry.event.cash_count, name)} {'bill(s)' if name in ('yen_1000', 'yen_5000', 'yen_10000') else 'coin(s)'}"
+                        for name in CashCount.model_fields.keys()
+                    ),
+                    inline=False,
+                )
             case CloseEvent():
                 embed.add_field(
                     name="Event Type",
@@ -957,6 +965,14 @@ class Register(WebCog):
                     value=f"Total Cash: {entry.event.cash_count.total()} yen\nExpected Cash: {self.bot.app.ledger.expected_cash()} yen\nDifference: {entry.event.cash_count.total() - self.bot.app.ledger.expected_cash()} yen",
                     inline=False,
                 )
+                embed.add_field(
+                    name="Cash Detail",
+                    value="\n".join(
+                        f"- {name.split('_')[1]} yen: {getattr(entry.event.cash_count, name)} {'bill(s)' if name in ('yen_1000', 'yen_5000', 'yen_10000') else 'coin(s)'}"
+                        for name in CashCount.model_fields.keys()
+                    ),
+                    inline=False,
+                )
             case CashCountEvent():
                 embed.add_field(
                     name="Event Type",
@@ -966,6 +982,14 @@ class Register(WebCog):
                 embed.add_field(
                     name="Cash Count",
                     value=f"Total Cash: {entry.event.cash_count.total()} yen\nExpected Cash: {self.bot.app.ledger.expected_cash()} yen\nDifference: {entry.event.cash_count.total() - self.bot.app.ledger.expected_cash()} yen",
+                    inline=False,
+                )
+                embed.add_field(
+                    name="Cash Detail",
+                    value="\n".join(
+                        f"- {name.split('_')[1]} yen: {getattr(entry.event.cash_count, name)} {'bill(s)' if name in ('yen_1000', 'yen_5000', 'yen_10000') else 'coin(s)'}"
+                        for name in CashCount.model_fields.keys()
+                    ),
                     inline=False,
                 )
             case SaleEvent():
