@@ -12,7 +12,7 @@ from nextcord.types import interactions
 from ..bot import BotApp
 from ..lib.ledger import JST
 from ..model import (CashCount, CashCountEvent, CloseEvent, EventsSource,
-                     EventsType, OpenEvent)
+                     EventsType, OpenEvent, SaleEvent, VoidEvent)
 from ..ui import RadioGroup
 from ..webutil import WebCog, get, post
 
@@ -894,6 +894,116 @@ class Register(WebCog):
             }
         )
 
+    @application_checks.guild_only()
+    @slash_register.subcommand(name="log", description="Get register log")
+    async def slash_register_log(
+        self,
+        interaction: nextcord.Interaction,
+        record_id: int = SlashOption(
+            name="record_id",
+            description="Record ID to start from (0 for all records)",
+            min_value=0,
+            required=True,
+        ),
+    ):
+        if not self.bot.app.ledger.is_open():
+            await interaction.send(
+                "Cannot get register log because the register is closed.",
+                ephemeral=True,
+            )
+            return
+
+        assert isinstance(interaction.user, nextcord.User | nextcord.Member)
+        assert isinstance(interaction.channel, nextcord.TextChannel)
+
+        entries = self.bot.app.ledger.after(id=record_id)
+        entry = entries[0] if entries else None
+
+        if entry is None:
+            await interaction.send(
+                f"No register log found after record ID {record_id}.",
+                ephemeral=True,
+            )
+            return
+
+        embed = nextcord.Embed(
+            title=f"Log Entry #{entry.id} - {entry.event.type.value} Found",
+            description=f"Event ID: {entry.id}\nOccurred at: {entry.event.occurred_at.astimezone(JST).strftime('%Y-%m-%d %H:%M:%S %Z')}\nOperator: <@{entry.event.operator}>",
+            color=nextcord.Color.blue(),
+        ).set_footer(
+            text=f"register_log|{interaction.id}|{self.bot.app.conf['lease_label']}"
+        )
+
+        match entry.event:
+            case OpenEvent():
+                embed.add_field(
+                    name="Event Type",
+                    value="Register Opened",
+                    inline=False,
+                )
+                embed.add_field(
+                    name="Cash Count",
+                    value=f"Total Cash: {entry.event.cash_count.total()} yen\nExpected Cash: {self.bot.app.ledger.expected_cash()} yen\nDifference: {entry.event.cash_count.total() - self.bot.app.ledger.expected_cash()} yen",
+                    inline=False,
+                )
+            case CloseEvent():
+                embed.add_field(
+                    name="Event Type",
+                    value="Register Closed",
+                    inline=False,
+                )
+                embed.add_field(
+                    name="Cash Count",
+                    value=f"Total Cash: {entry.event.cash_count.total()} yen\nExpected Cash: {self.bot.app.ledger.expected_cash()} yen\nDifference: {entry.event.cash_count.total() - self.bot.app.ledger.expected_cash()} yen",
+                    inline=False,
+                )
+            case CashCountEvent():
+                embed.add_field(
+                    name="Event Type",
+                    value="Cash Count Reported",
+                    inline=False,
+                )
+                embed.add_field(
+                    name="Cash Count",
+                    value=f"Total Cash: {entry.event.cash_count.total()} yen\nExpected Cash: {self.bot.app.ledger.expected_cash()} yen\nDifference: {entry.event.cash_count.total() - self.bot.app.ledger.expected_cash()} yen",
+                    inline=False,
+                )
+            case SaleEvent():
+                embed.add_field(
+                    name="Event Type",
+                    value="Sale Event",
+                    inline=False,
+                )
+                embed.add_field(
+                    name="Items Sold",
+                    value="\n".join(
+                        f"- {item.product_id}: {item.quantity} x {item.unit_price} yen = {item.quantity * item.unit_price} yen"
+                        for item in entry.event.items
+                    ),
+                    inline=False,
+                )
+            case VoidEvent():
+                embed.add_field(
+                    name="Event Type",
+                    value="Void Event",
+                    inline=False,
+                )
+                embed.add_field(
+                    name="Voided Sale Event ID",
+                    value=f"{entry.event.ref_event_id}",
+                    inline=False,
+                )
+            case _:
+                embed.add_field(
+                    name="Event Type",
+                    value=f"Unknown Event Type: {entry.event.type.value}",
+                    inline=False,
+                )
+
+        await interaction.send(
+            embed=embed,
+            ephemeral=True,
+        )
 
 def setup(bot: BotApp):
     bot.add_cog(Register(bot))
