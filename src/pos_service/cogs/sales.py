@@ -298,9 +298,7 @@ class Sales(WebCog):
         if not cog.is_session_valid(request):
             return json_response({"error": "unauthorized"}, status=401)
 
-        entries = self.bot.app.ledger.after(
-            id=self.bot.app.ledger.current_boundary()
-        )
+        entries = self.bot.app.ledger.after(id=0)
         sales: list[LedgerEntry[SaleEvent]] = [
             e for e in entries
             if isinstance(e.event, SaleEvent)
