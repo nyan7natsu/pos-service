@@ -287,6 +287,47 @@ class Sales(WebCog):
             status=200
         )
 
+    @get("/api/backstage/items")
+    async def handle_get_items(self, request: Request) -> Response:
+        "販売処理の一覧から，すでに販売された商品における材料の各種数量を返すAPIエンドポイント"
+
+        cog: "BackStage | None" = self.bot.get_cog("BackStage")  # type: ignore
+        if cog is None:
+            return json_response({"error": "backstage not loaded"}, status=500)
+
+        if not cog.is_session_valid(request):
+            return json_response({"error": "unauthorized"}, status=401)
+
+        entries = self.bot.app.ledger.after(
+            id=self.bot.app.ledger.current_boundary()
+        )
+        sales: list[LedgerEntry[SaleEvent]] = [
+            e for e in entries
+            if isinstance(e.event, SaleEvent)
+        ]  # type: ignore
+        voided = {
+            e.event.ref_event_id for e in entries if isinstance(e.event, VoidEvent)
+        }
+
+        item_counts: dict[str, int] = {}
+        for sale in sales:
+            if sale.id in voided:
+                continue
+            for item in sale.event.items:
+                product = self.bot.app.product_manager.get_product(
+                    item.product_id)
+                if not product:
+                    _logger.warning(
+                        "Product not found for sale item: %s", item.product_id)
+                    continue
+                for product_item in product.items:
+                    item_counts[product_item.product_name] = item_counts.get(
+                        product_item.product_name, 0
+                    ) + product_item.quantity * item.quantity
+
+        return json_response({"item_counts": item_counts}, status=200)
+
+
     @post("/api/backstage/void")
     async def handle_void(self, request: Request) -> Response:
         "VOID処理を行うAPIエンドポイント。VOID処理の結果としてVOIDイベントのIDを返す。再送の場合は前回の結果を返す。"

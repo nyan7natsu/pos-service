@@ -12,12 +12,17 @@ class ProductMaster(pydantic.BaseModel):
     products: list["Product"]
 
 
+class ProductItem(pydantic.BaseModel):
+    product_name: str
+    quantity: int
+
 class Product(pydantic.BaseModel):
     id: int
     name: str
     price: int
     category: str = ""
     enabled: bool = True
+    items: list[ProductItem] = []
 
 
 class ProductManager:
