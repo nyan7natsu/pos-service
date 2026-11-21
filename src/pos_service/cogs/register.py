@@ -591,7 +591,7 @@ class Register(WebCog):
             source=EventsSource.DISCORD,
             idempotency_key=str(interaction.id),
             occurred_at=interaction.created_at,
-            cash_delta=total - excepted_total
+            cash_delta=0
         )
 
         await wait
@@ -684,7 +684,7 @@ class Register(WebCog):
             source=EventsSource.BACKSTAGE,
             idempotency_key=idempotency_key,
             occurred_at=occurred_at,
-            cash_delta=total - expected_total
+            cash_delta=0
         )
 
         await wait

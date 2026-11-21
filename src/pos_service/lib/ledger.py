@@ -338,7 +338,6 @@ class LedgerManager:
                 case (
                     OpenEvent(cash_count=cash_count)
                     | CloseEvent(cash_count=cash_count)
-                    | CashCountEvent(cash_count=cash_count)
                 ):
                     _cash_count = cash_count
                     _last_event = entry
