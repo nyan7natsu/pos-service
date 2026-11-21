@@ -168,3 +168,36 @@ products:
     items:
       - product_name: 東方美人茶(台湾紅茶)
         quantity: 1
+
+  - id: 15
+    name: こしあん（単品）
+    price: 100
+    category: "単品"
+    enabled: true
+    items:
+      - product_name: こしあん
+        quantity: 1
+  - id: 16
+    name: つぶあん（単品）
+    price: 100
+    category: "単品"
+    enabled: true
+    items:
+      - product_name: つぶあん
+        quantity: 1
+  - id: 17
+    name: カスタードクリーム（単品）
+    price: 100
+    category: "単品"
+    enabled: true
+    items:
+      - product_name: カスタードクリーム
+        quantity: 1
+  - id: 18
+    name: 抹茶あん（単品）
+    price: 100
+    category: "単品"
+    enabled: true
+    items:
+      - product_name: 抹茶あん
+        quantity: 1
