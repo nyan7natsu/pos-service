@@ -481,13 +481,15 @@ class Sales(WebCog):
     @get("/api/register/products")
     async def handle_get_products(self, request: Request) -> Response:
         "販売可能な商品の一覧を返すAPIエンドポイント"
+        all_query = request.query.get("all", "false").lower() == "true"
+
         cog: "BackStage | None" = self.bot.get_cog("BackStage")  # type: ignore
 
         if not self.bot.app.authenticator.check_request(request) and (cog is None or not cog.is_session_valid(request)):
             return json_response({"error": "unauthorized"}, status=401)
 
         products = self.bot.app.product_manager.products
-        return json_response({"products": [p.model_dump() for p in products if p.enabled]})
+        return json_response({"products": [p.model_dump() for p in products if all_query or p.enabled]})
 
 
     @post("/api/register/sale")
