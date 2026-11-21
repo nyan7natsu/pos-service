@@ -313,7 +313,8 @@ class Sales(WebCog):
                 continue
             for item in sale.event.items:
                 product = self.bot.app.product_manager.get_product(
-                    item.product_id)
+                    item.product_id
+                )
                 if not product:
                     _logger.warning(
                         "Product not found for sale item: %s", item.product_id)
