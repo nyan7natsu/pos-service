@@ -251,17 +251,20 @@ class Sales(WebCog):
                             text=f"voided|{idempotency_key}|{self.bot.app.conf['lease_label']}"
                         )
                         await message.edit(embed=embed)
+                        break
 
-        embed = nextcord.Embed(
-            title=f"#{entries[0].id} VOID",
-            description=f"VOID processed successfully for sale #{target.id}.",
-            color=nextcord.Color.yellow(),
-        ).add_field(name="VOID理由", value=reason, inline=False).add_field(
-            name="VOIDユーザー", value=f"<@{operator}>", inline=False
-        ).set_footer(
-            text=f"voided|{idempotency_key}|{self.bot.app.conf['lease_label']}"
+        self.bot.create_report_task(
+            "",
+            nextcord.Embed(
+                title=f"#{entries[0].id} VOID",
+                description=f"VOID processed successfully for sale #{target.id}.",
+                color=nextcord.Color.yellow(),
+            ).add_field(name="VOID理由", value=reason, inline=False).add_field(
+                name="VOIDユーザー", value=f"<@{operator}>", inline=False
+            ).set_footer(
+                text=f"voided|{idempotency_key}|{self.bot.app.conf['lease_label']}"
+            )
         )
-        self.bot.create_report_task("", embed)
 
         return void
 
