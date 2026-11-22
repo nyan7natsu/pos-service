@@ -80,7 +80,7 @@ products:
     name: カスタードクリーム
     price: 150
     category: "まんじゅう単品"
-    enabled: true
+    enabled: false
     items:
       - product_name: 中華小麦パン
         quantity: 1
