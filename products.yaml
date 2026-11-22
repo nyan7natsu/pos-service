@@ -251,7 +251,7 @@ products:
       - product_name: オレンジ
         quantity: 1
 
-  - id: 33
+  - id: 36
     name: コーラ
     price: 10
     category: "ソフドリ"
@@ -259,7 +259,7 @@ products:
     items:
       - product_name: コーラ
         quantity: 1
-  - id: 34
+  - id: 37
     name: 三ツ矢サイダー
     price: 10
     category: "ソフドリ"
@@ -267,7 +267,7 @@ products:
     items:
       - product_name: 三ツ矢サイダー
         quantity: 1
-  - id: 35
+  - id: 38
     name: オレンジ
     price: 10
     category: "ソフドリ"
