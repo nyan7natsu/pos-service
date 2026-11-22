@@ -10,6 +10,7 @@ if typing.TYPE_CHECKING:
 
 class ProductMaster(pydantic.BaseModel):
     products: list["Product"]
+    discounts: list["Discounts"] = []
 
 
 class ProductItem(pydantic.BaseModel):
@@ -25,12 +26,24 @@ class Product(pydantic.BaseModel):
     items: list[ProductItem] = []
 
 
+class DiscountTake(pydantic.BaseModel):
+    category: str
+    quantity: int
+
+
+class Discounts(pydantic.BaseModel):
+    name: str
+    discount: int
+    enabled: bool = True
+    take: list[DiscountTake] = []
+
 class ProductManager:
     def __init__(self, pos: "POSService", filename: str):
         self.pos = pos
         self.filename = filename
         self.master: ProductMaster | None = None
         self.products: list[Product] = []
+        self.discounts: list[Discounts] = []
 
     async def load(self):
         async with aiofiles.open(self.filename, "r", encoding="utf-8") as f:
@@ -38,6 +51,7 @@ class ProductManager:
             data = yaml.safe_load(content)
             self.master = ProductMaster(**data)
             self.products = self.master.products
+            self.discounts = self.master.discounts
 
     def get_product(self, product_id: int) -> Product | None:
         for product in self.products:

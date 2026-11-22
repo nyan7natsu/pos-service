@@ -130,7 +130,7 @@ products:
   - id: 10
     name: コーラ
     price: 100
-    category: "ドリンク"
+    category: "ソフドリ"
     enabled: true
     items:
       - product_name: コーラ
@@ -138,7 +138,7 @@ products:
   - id: 11
     name: 三ツ矢サイダー
     price: 100
-    category: "ドリンク"
+    category: "ソフドリ"
     enabled: true
     items:
       - product_name: 三ツ矢サイダー
@@ -146,7 +146,7 @@ products:
   - id: 12
     name: オレンジ
     price: 100
-    category: "ドリンク"
+    category: "ソフドリ"
     enabled: true
     items:
       - product_name: オレンジ
@@ -155,7 +155,7 @@ products:
   - id: 13
     name: 阿里山高山茶(台湾緑茶)
     price: 100
-    category: "ドリンク"
+    category: "お茶"
     enabled: true
     items:
       - product_name: 阿里山高山茶(台湾緑茶)
@@ -163,7 +163,7 @@ products:
   - id: 14
     name: 東方美人茶(台湾紅茶)
     price: 100
-    category: "ドリンク"
+    category: "お茶"
     enabled: true
     items:
       - product_name: 東方美人茶(台湾紅茶)
@@ -291,4 +291,51 @@ products:
     enabled: false
     items:
       - product_name: オレンジ
+        quantity: 1
+
+  - id: 28
+    name: ゲーム体験会
+    price: 0
+    category: "体験記録"
+    enabled: true
+    items:
+      - product_name: ゲーム体験会
+        quantity: 1
+
+discounts:
+  - id: 1
+    name: 3個割引
+    discount: 50
+    enabled: true
+    take:
+      - category: "まんじゅう"
+        quantity: 3
+  - id: 2
+    name: 4個割引
+    discount: 100
+    enabled: true
+    take:
+      - category: "まんじゅう"
+        quantity: 4
+  - id: 3
+    name: ゲーム体験割引 (ジュース)
+    discount: 50
+    enabled: true
+    take:
+      - category: "体験割引"
+        quantity: 1
+      - category: "まんじゅう"
+        quantity: 2
+      - category: "ソフドリ"
+        quantity: 1
+  - id: 4
+    name: ゲーム体験割引 (お茶)
+    discount: 100
+    enabled: true
+    take:
+      - category: "体験割引"
+        quantity: 1
+      - category: "まんじゅう"
+        quantity: 2
+      - category: "お茶"
         quantity: 1
