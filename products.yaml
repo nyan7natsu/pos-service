@@ -96,6 +96,14 @@ products:
         quantity: 1
       - product_name: 抹茶あん
         quantity: 10
+  - id: 100
+    name: 中華小麦パン
+    price: 100
+    category: "まんじゅう単品"
+    enabled: true
+    items:
+      - product_name: 中華小麦パン
+        quantity: 1
 
   - id: 5
     name: 2種+コーラ
