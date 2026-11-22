@@ -230,13 +230,30 @@ products:
     name: 阿里山高山茶(台湾緑茶)
     price: 100
     category: "お茶"
-    enabled: true
+    enabled: false
     items:
       - product_name: 阿里山高山茶(台湾緑茶)
         quantity: 1
   - id: 14
     name: 東方美人茶(台湾紅茶)
     price: 100
+    category: "お茶"
+    enabled: false
+    items:
+      - product_name: 東方美人茶(台湾紅茶)
+        quantity: 1
+
+  - id: 31
+    name: 阿里山高山茶(台湾緑茶)
+    price: 50
+    category: "お茶"
+    enabled: true
+    items:
+      - product_name: 阿里山高山茶(台湾緑茶)
+        quantity: 1
+  - id: 32
+    name: 東方美人茶(台湾紅茶)
+    price: 50
     category: "お茶"
     enabled: true
     items:
