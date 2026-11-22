@@ -180,7 +180,7 @@ products:
     name: コーラ
     price: 100
     category: "ソフドリ"
-    enabled: true
+    enabled: false
     items:
       - product_name: コーラ
         quantity: 1
@@ -188,13 +188,38 @@ products:
     name: 三ツ矢サイダー
     price: 100
     category: "ソフドリ"
-    enabled: true
+    enabled: false
     items:
       - product_name: 三ツ矢サイダー
         quantity: 1
   - id: 12
     name: オレンジ
     price: 100
+    category: "ソフドリ"
+    enabled: false
+    items:
+      - product_name: オレンジ
+        quantity: 1
+
+  - id: 28
+    name: コーラ
+    price: 50
+    category: "ソフドリ"
+    enabled: true
+    items:
+      - product_name: コーラ
+        quantity: 1
+  - id: 29
+    name: 三ツ矢サイダー
+    price: 50
+    category: "ソフドリ"
+    enabled: true
+    items:
+      - product_name: 三ツ矢サイダー
+        quantity: 1
+  - id: 30
+    name: オレンジ
+    price: 50
     category: "ソフドリ"
     enabled: true
     items:
