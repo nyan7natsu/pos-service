@@ -1,7 +1,7 @@
 import asyncio
 import datetime
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Literal, TypedDict, override
+from typing import TYPE_CHECKING, Any, Literal, override
 
 import nextcord
 from aiohttp.web import Request, Response, json_response
@@ -12,7 +12,8 @@ from nextcord.types import interactions
 from ..bot import BotApp
 from ..lib.ledger import JST
 from ..model import (CashCount, CashCountEvent, CloseEvent, DiscountData,
-                     EventsSource, EventsType, OpenEvent, SaleEvent, VoidEvent)
+                     EventsSource, EventsType, OpenEvent, RefundEvent,
+                     SaleEvent, VoidEvent)
 from ..ui import RadioGroup
 from ..webutil import WebCog, get, post
 
@@ -906,13 +907,6 @@ class Register(WebCog):
             required=True,
         ),
     ):
-        if not self.bot.app.ledger.is_open():
-            await interaction.send(
-                "Cannot get register log because the register is closed.",
-                ephemeral=True,
-            )
-            return
-
         assert isinstance(interaction.user, nextcord.User | nextcord.Member)
         assert isinstance(interaction.channel, nextcord.TextChannel)
 
@@ -1006,15 +1000,44 @@ class Register(WebCog):
                     ),
                     inline=False,
                 )
+                embed.add_field(
+                    name="Total Sale Amount",
+                    value=f"{entry.event.cash_delta} yen",
+                    inline=False,
+                )
             case VoidEvent():
                 embed.add_field(
                     name="Event Type",
-                    value="Void Event",
+                    value="Void Sale Event",
                     inline=False,
                 )
                 embed.add_field(
                     name="Voided Sale Event ID",
                     value=f"{entry.event.ref_event_id}",
+                    inline=False,
+                )
+                embed.add_field(
+                    name="Voided Reason",
+                    value=entry.event.reason,
+                    inline=False,
+                )
+            case RefundEvent():
+                embed.add_field(
+                    name="Event Type",
+                    value="Refund Item  Event",
+                    inline=False,
+                )
+                embed.add_field(
+                    name="Refunded Item",
+                    value="\n".join(
+                        f"- {item.product_id}: {item.quantity} x {item.unit_price} yen = {item.quantity * item.unit_price} yen"
+                        for item in entry.event.items
+                    ),
+                    inline=False,
+                )
+                embed.add_field(
+                    name="Refund Reason",
+                    value=entry.event.reason,
                     inline=False,
                 )
             case _:
