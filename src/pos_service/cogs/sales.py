@@ -373,7 +373,7 @@ class Sales(WebCog):
         self, interaction: nextcord.Interaction, message: nextcord.Message
     ):
         assert isinstance(interaction.user, nextcord.User | nextcord.Member)
-        assert isinstance(self.bot.user, nextcord.User | nextcord.Member)
+        assert isinstance(self.bot.user, nextcord.ClientUser)
 
         if message.author.id != self.bot.user.id:
             await interaction.send(
