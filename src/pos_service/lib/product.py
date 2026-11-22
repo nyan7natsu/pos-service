@@ -32,6 +32,7 @@ class DiscountTake(pydantic.BaseModel):
 
 
 class Discounts(pydantic.BaseModel):
+    id: int
     name: str
     discount: int
     enabled: bool = True

@@ -9,8 +9,8 @@ from nextcord.ext import application_checks, commands
 
 from ..bot import BotApp
 from ..lib.ledger import JST
-from ..model import (CashCount, EventsSource, EventsType, LedgerEntry,
-                     SaleEvent, SaleItem, VoidEvent)
+from ..model import (CashCount, DiscountData, EventsSource, EventsType,
+                     LedgerEntry, SaleEvent, SaleItem, VoidEvent)
 from ..webutil import WebCog, get, post
 
 _logger = getLogger(__name__)
@@ -23,6 +23,7 @@ class SaleData(pydantic.BaseModel):
     idempotency_key: str = pydantic.Field(min_length=1, max_length=255)
     items: tuple[SaleItem, ...] = pydantic.Field(min_length=1)
     discount: int = pydantic.Field(ge=0)
+    discount_ids: list[int] = pydantic.Field(default_factory=list)
     cash_count: "CashCount"
     occurred_at: pydantic.AwareDatetime
     operator: str = pydantic.Field(min_length=1, max_length=255)
@@ -138,7 +139,7 @@ class Sales(WebCog):
                 ),
                 color=nextcord.Color.green(),
             )
-            .add_field(name="Discount", value=f"¥{entry.event.discount}", inline=False)
+            .add_field(name="Discount", value=f"¥{entry.event.discount.discount_price}", inline=False)
             .set_footer(
                 text=f"sale_processed|{entry.event.idempotency_key}|{self.bot.app.conf['lease_label']}"
             )
@@ -501,7 +502,7 @@ class Sales(WebCog):
         if not self.bot.app.authenticator.check_request(request) and (cog is None or not cog.is_session_valid(request)):
             return json_response({"error": "unauthorized"}, status=401)
 
-        discounts = self.bot.app.product_manager.products
+        discounts = self.bot.app.product_manager.discounts
         return json_response({"discounts": [d.model_dump() for d in discounts if all_query or d.enabled]})
 
     @post("/api/register/sale")
@@ -572,7 +573,10 @@ class Sales(WebCog):
                         type=EventsType.SALE,
                         source=EventsSource.POS,
                         cash_delta=total,
-                        discount=sale_data.discount,
+                        discount=DiscountData(
+                            discount_price=sale_data.discount,
+                            ids=sale_data.discount_ids
+                        ),
                         occurred_at=sale_data.occurred_at,
                         operator=op,
                         items=sale_data.items,

@@ -40,6 +40,17 @@ class LedgerEntry[T: "LedgerEvent"](pydantic.BaseModel):
     event: "T"
 
 
+class DiscountData(pydantic.BaseModel):
+    discount_price: int
+    ids: list[int]
+
+    @pydantic.model_validator(mode="before")
+    @classmethod
+    def _from_int(cls, v):
+        if isinstance(v, int):
+            return {"discount_price": v, "ids": []}
+        return v
+
 class LedgerEventBase(pydantic.BaseModel):
     "Ledgerのイベントの基本クラス"
 
@@ -50,7 +61,7 @@ class LedgerEventBase(pydantic.BaseModel):
 
     source: EventsSource
     cash_delta: int
-    discount: int
+    discount: DiscountData
     operator: DiscordId
     occurred_at: datetime.datetime
 

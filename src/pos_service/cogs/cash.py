@@ -3,8 +3,8 @@ from nextcord import SlashOption
 from nextcord.ext import application_checks
 
 from ..bot import BotApp
-from ..model import (CashCount, CashInEvent, CashOutEvent, EventsSource,
-                     EventsType)
+from ..model import (CashCount, CashInEvent, CashOutEvent, DiscountData,
+                     EventsSource, EventsType)
 from ..webutil import WebCog
 
 
@@ -122,7 +122,7 @@ class Cash(WebCog):
             type=EventsType.CASH_IN,
             source=EventsSource.DISCORD,
             cash_delta=amount,
-            discount=0,
+            discount=DiscountData(discount_price=0, ids=[]),
             operator=interaction.user.id,
             occurred_at=interaction.created_at,
             cash_count=cash_count,
@@ -297,7 +297,7 @@ class Cash(WebCog):
             type=EventsType.CASH_OUT,
             source=EventsSource.DISCORD,
             cash_delta=-amount,
-            discount=0,
+            discount=DiscountData(discount_price=0, ids=[]),
             operator=interaction.user.id,
             occurred_at=interaction.created_at,
             cash_count=-cash_count,

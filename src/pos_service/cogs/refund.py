@@ -3,8 +3,8 @@ from nextcord import SlashOption
 from nextcord.ext import application_checks
 
 from ..bot import BotApp
-from ..model import (CashCount, EventsSource, EventsType, RefundEvent,
-                     RefundItem)
+from ..model import (CashCount, DiscountData, EventsSource, EventsType,
+                     RefundEvent, RefundItem)
 from ..webutil import WebCog
 
 
@@ -239,7 +239,7 @@ class Refund(WebCog):
             type=EventsType.REFUND,
             source=EventsSource.DISCORD,
             cash_delta=-amount,
-            discount=0,
+            discount=DiscountData(discount_price=0, ids=[]),
             operator=interaction.user.id,
             reason=reason,
             cash_count=-cash_count,

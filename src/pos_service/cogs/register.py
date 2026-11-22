@@ -11,8 +11,8 @@ from nextcord.types import interactions
 
 from ..bot import BotApp
 from ..lib.ledger import JST
-from ..model import (CashCount, CashCountEvent, CloseEvent, EventsSource,
-                     EventsType, OpenEvent, SaleEvent, VoidEvent)
+from ..model import (CashCount, CashCountEvent, CloseEvent, DiscountData,
+                     EventsSource, EventsType, OpenEvent, SaleEvent, VoidEvent)
 from ..ui import RadioGroup
 from ..webutil import WebCog, get, post
 
@@ -171,7 +171,7 @@ class Register(WebCog):
                 type=EventsType.OPEN,
                 source=EventsSource.DISCORD,
                 cash_delta=cash_count.total() - self.bot.app.ledger.expected_cash(),
-                discount=0,
+                discount=DiscountData(discount_price=0, ids=[]),
                 operator=operator,
                 occurred_at=occurred_at,
                 cash_count=cash_count,
@@ -444,7 +444,7 @@ class Register(WebCog):
                 type=EventsType.X,
                 source=source,
                 cash_delta=cash_delta,
-                discount=0,
+                discount=DiscountData(discount_price=0, ids=[]),
                 operator=operator,
                 occurred_at=occurred_at,
                 cash_count=cash_count,
@@ -836,7 +836,7 @@ class Register(WebCog):
                 type=EventsType.CLOSE,
                 source=EventsSource.DISCORD,
                 cash_delta=total - excepted_total,
-                discount=0,
+                discount=DiscountData(discount_price=0, ids=[]),
                 operator=interaction.user.id,
                 occurred_at=interaction.created_at,
                 cash_count=cash_count,
