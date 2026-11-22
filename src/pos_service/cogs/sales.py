@@ -57,6 +57,9 @@ class Sales(WebCog):
 
     @commands.Cog.listener()
     async def on_ready(self):
+        await self.load_operators()
+
+    async def load_operators(self):
         try:
             self.operators = await self.get_users_from_role_id(
                 self.bot.app.conf["operator_role_id"]
@@ -477,6 +480,9 @@ class Sales(WebCog):
         "レジを操作する事ができる担当者の，一覧を返すAPIエンドポイント"
         if not self.bot.app.authenticator.check_request(request):
             return json_response({"error": "unauthorized"}, status=401)
+
+        if len(self.operators) == 0:
+            await self.load_operators()
 
         return json_response({"operators": [{"name": name, "id": str(user_id)} for name, user_id in self.operators]})
 
