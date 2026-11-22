@@ -130,7 +130,7 @@ class Sales(WebCog):
         embed = (
             nextcord.Embed(
                 title=f"#{entry.id} Sale",
-                description=f"Sale processed successfully.\n"
+                description=f"売り上げ登録完了\n"
                 + "\n".join(
                     [
                         f"**{i.name if (i := self.bot.app.product_manager.get_product(item.product_id)) else item.product_id}** @ ¥{item.unit_price}x{item.quantity} (¥{item.unit_price * item.quantity})"
@@ -139,7 +139,8 @@ class Sales(WebCog):
                 ),
                 color=nextcord.Color.green(),
             )
-            .add_field(name="Discount", value=f"¥{entry.event.discount.discount_price}", inline=False)
+            .add_field(name="割引", value=f"¥{entry.event.discount.discount_price}", inline=False)
+            .add_field(name="合計", value=f"¥{entry.event.cash_delta}", inline=False)
             .set_footer(
                 text=f"sale_processed|{entry.event.idempotency_key}|{self.bot.app.conf['lease_label']}"
             )
