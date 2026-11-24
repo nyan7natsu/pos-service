@@ -166,6 +166,7 @@ class POSService:
                         )
                     },
                 )
+        return Response(status=502, text="Bad Gateway (Running in dev mode but Vite server is not running?)")
 
     async def bot_start(self):
         _logger.info("Starting the bot...")
