@@ -133,7 +133,7 @@ class POSService:
         return await handler(request)
 
     async def index_redirect(self, request: Request) -> Response:
-        "これを入れないと Forbidden になるか，ディレクトリの一覧が表示されてしまう..."
+        # これを入れないと Forbidden になるか，ディレクトリの一覧が表示されてしまう...
         params = request.rel_url.query_string
         hashes = request.rel_url.fragment
         raise HTTPFound(
